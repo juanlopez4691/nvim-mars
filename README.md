@@ -35,9 +35,11 @@ for both humans and AI coding agents to contribute confidently.
   `PATH`.
 
 Recommended, not required: a [Nerd Font](https://www.nerdfonts.com/font-downloads)
-(any of them) for file-type/git/diagnostic icons. Mars detects one via
-`vim.g.have_nerd_font` and falls back to plain text/Unicode symbols when it's
-not set: no font is a hard requirement.
+(any of them) for file-type/git/diagnostic icons. There's no reliable way to
+detect a terminal's font from Neovim, so this is a manual opt-in: set
+`vim.g.have_nerd_font = true` (default `false`) if you have one installed.
+Mars falls back to plain text/Unicode symbols otherwise: no font is a hard
+requirement.
 
 ## Installation
 

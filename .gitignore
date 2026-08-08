@@ -1,8 +1,11 @@
+.claude/settings.local.json
 *.log
 *.cache
 cache/
 data/
 doc/tags
 node_modules/
+.opencode/
+.claude/agent-memory/
 docs/.vitepress/cache/
 docs/.vitepress/dist/

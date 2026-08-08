@@ -1,0 +1,42 @@
+---
+name: format
+user-invocable: false
+description: >
+  Mars configuration formatting conventions. Use when formatting files in
+  this native-first Neovim config repository. Covers Stylua for Lua and
+  format verification. For full details see AGENTS.md in the repository
+  root.
+context: fork
+---
+
+# Mars Formatting Conventions (This Repo)
+
+## Scope
+
+This skill covers **formatting only**: running `stylua` and verifying
+format. It does NOT cover code correctness, linting, or commit style. Do NOT
+run `:checkhealth`, `:messages`, or `:Lint` unless explicitly asked.
+
+## Lua
+
+Run `stylua .` before committing Lua changes.
+
+- Indent: 2 spaces
+- Column width: 120
+- Configuration: `stylua.toml`
+
+## Other File Types
+
+Markdown, JSON, and TOML formatting in this repo is handled by editor
+defaults and LSP. No manual CLI formatter steps are required.
+
+## Format Verification
+
+In Neovim, format the current buffer:
+
+```vim
+:MarsFormat
+```
+
+Inspect resolution (which binary was picked and why) via `:checkhealth
+mars`.
