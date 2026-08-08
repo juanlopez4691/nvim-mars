@@ -88,6 +88,7 @@ NVIM_APPNAME=nvim-mars nvim
 | `<leader>g`   | Git                   |
 | `<leader>l`   | Laravel               |
 | `<leader>o`   | OpenCode (AI chat)    |
+| `<leader>q`   | Session               |
 | `<leader>r`   | Replace               |
 | `<leader>s`   | Search & replace      |
 | `<leader>t`   | Terminal              |

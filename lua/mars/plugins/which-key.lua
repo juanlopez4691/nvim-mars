@@ -69,6 +69,7 @@ require("mars.pack").on({
       group("<leader>g", "Git"),
       group("<leader>l", "Laravel"),
       group("<leader>o", "OpenCode"),
+      group("<leader>q", "Session"),
       group("<leader>r", "Replace"),
       group("<leader>s", "Search & replace"),
       group("<leader>t", "Terminal"),
