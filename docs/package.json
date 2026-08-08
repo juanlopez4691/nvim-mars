@@ -1,0 +1,14 @@
+{
+  "name": "nvim-mars-docs",
+  "private": true,
+  "type": "module",
+  "description": "Project website for Mars, a minimal native-first Neovim configuration.",
+  "scripts": {
+    "docs:dev": "vitepress dev .",
+    "docs:build": "vitepress build .",
+    "docs:preview": "vitepress preview ."
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
