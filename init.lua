@@ -22,3 +22,8 @@ require_dir("core")
 require_dir("plugins")
 require_dir("ui")
 require_dir("lang")
+
+-- Local, gitignored overrides (see lua/mars/local.lua.example). Loaded last
+-- so it can override anything set above without ever touching a tracked
+-- file; nothing to commit, nothing to conflict with on pull.
+pcall(require, "mars.local")

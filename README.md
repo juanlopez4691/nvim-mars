@@ -36,10 +36,18 @@ for both humans and AI coding agents to contribute confidently.
 
 Recommended, not required: a [Nerd Font](https://www.nerdfonts.com/font-downloads)
 (any of them) for file-type/git/diagnostic icons. There's no reliable way to
-detect a terminal's font from Neovim, so this is a manual opt-in: set
-`vim.g.have_nerd_font = true` (default `false`) if you have one installed.
-Mars falls back to plain text/Unicode symbols otherwise: no font is a hard
+detect a terminal's font from Neovim, so this is a manual opt-in: copy
+`lua/mars/local.lua.example` to `lua/mars/local.lua` (gitignored) and set
+`vim.g.have_nerd_font = true` there: no need to edit a tracked file. Mars
+falls back to plain text/Unicode symbols otherwise: no font is a hard
 requirement.
+
+## Customizing
+
+`lua/mars/local.lua` (copy from `lua/mars/local.lua.example`) is gitignored
+and loaded last, after everything else; use it to override any option,
+global, keymap, or plugin config without maintaining a diff against a
+tracked file.
 
 ## Installation
 

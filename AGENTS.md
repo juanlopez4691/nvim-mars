@@ -243,10 +243,17 @@ Two separate things are both called "linting" here: keep them distinct:
   - `lua/mars/plugins/`: one file per external plugin: `vim.pack.add()` call
     plus that plugin's config.
   - `lua/mars/pack.lua`: the lazy-load wrapper around `vim.pack`.
+  - `lua/mars/local.lua`: gitignored, user-specific overrides. Not part of
+    the repo; see `lua/mars/local.lua.example`.
 - Do not manually `require` files under `lua/mars/core/`, `lua/mars/ui/`, or
-  `lua/mars/lang/`: they are auto-loaded (see `lua/mars/init.lua`'s
-  `require_dir` helper). `lsp/*.lua` files are auto-loaded by Neovim itself,
-  not by Mars's own code.
+  `lua/mars/lang/`: they are auto-loaded (see `init.lua`'s `require_dir`
+  helper). `lsp/*.lua` files are auto-loaded by Neovim itself, not by Mars's
+  own code.
+- User-specific customization (e.g. `vim.g.have_nerd_font`) belongs in
+  `lua/mars/local.lua` (copy `lua/mars/local.lua.example`), not in a tracked
+  file: it's gitignored and loaded last, after everything else, so it can
+  override any option/global/keymap/plugin config without ever producing an
+  uncommitted diff.
 - Plugin specs live in `lua/mars/plugins/*.lua`. Defer loading through
   `lua/mars/pack.lua`'s wrapper when a plugin doesn't need to be available at
   startup; otherwise call `vim.pack.add()` directly.

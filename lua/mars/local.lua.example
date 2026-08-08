@@ -1,0 +1,12 @@
+-- Copy this file to lua/mars/local.lua (gitignored) to customize Mars
+-- without ever having to commit or maintain a diff against a tracked file.
+--
+-- Loaded last, after every core/plugins/ui/lang module, so it can override
+-- anything set above: options, globals, keymaps, even plugin config by
+-- calling require("plugin").setup({...}) again with your own values.
+
+-- vim.g.have_nerd_font = true
+
+-- vim.o.scrolloff = 8
+
+-- vim.keymap.set("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit all" })
