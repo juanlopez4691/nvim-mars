@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  NVIM_VERSION: v0.12.4
+  STYLUA_VERSION: v2.5.2
+  SELENE_VERSION: 0.31.0
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install stylua
+        run: |
+          curl -Lo stylua.zip "https://github.com/JohnnyMorganz/stylua/releases/download/${STYLUA_VERSION}/stylua-linux-x86_64.zip"
+          unzip -o stylua.zip -d /usr/local/bin
+          chmod +x /usr/local/bin/stylua
+
+      - name: Install selene
+        run: |
+          curl -Lo selene.zip "https://github.com/Kampfkarren/selene/releases/download/${SELENE_VERSION}/selene-${SELENE_VERSION}-linux.zip"
+          unzip -o selene.zip -d /usr/local/bin
+          chmod +x /usr/local/bin/selene
+
+      - name: Install Neovim
+        run: |
+          curl -Lo nvim.tar.gz "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
+          tar xzf nvim.tar.gz
+          echo "$PWD/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - name: stylua --check
+        run: stylua --check .
+
+      - name: selene
+        run: selene .
+
+      - name: Headless boot smoke test
+        run: |
+          export XDG_CONFIG_HOME
+          XDG_CONFIG_HOME="$(dirname "$GITHUB_WORKSPACE")"
+          export NVIM_APPNAME
+          NVIM_APPNAME="$(basename "$GITHUB_WORKSPACE")"
+          nvim --headless -c 'quit' 2>&1 | tee /tmp/boot.log
+          if grep -qi "error" /tmp/boot.log; then
+            echo "::error::Headless boot produced errors"
+            cat /tmp/boot.log
+            exit 1
+          fi
