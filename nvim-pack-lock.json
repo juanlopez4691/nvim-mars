@@ -1,5 +1,9 @@
 {
   "plugins": {
+    "blade-nav.nvim": {
+      "rev": "909825e2cfa5171867f2109f7cedc5e3e5d60956",
+      "src": "https://github.com/ricardoramirezr/blade-nav.nvim"
+    },
     "fzf-lua": {
       "rev": "8671012a7b2a1648595952c655039d51fb301c14",
       "src": "https://github.com/ibhagwan/fzf-lua"
