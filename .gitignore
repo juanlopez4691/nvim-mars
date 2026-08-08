@@ -1,0 +1,8 @@
+*.log
+*.cache
+cache/
+data/
+doc/tags
+node_modules/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
