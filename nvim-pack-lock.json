@@ -1,5 +1,9 @@
 {
   "plugins": {
+    "fzf-lua": {
+      "rev": "8671012a7b2a1648595952c655039d51fb301c14",
+      "src": "https://github.com/ibhagwan/fzf-lua"
+    },
     "nvim-treesitter": {
       "rev": "c9f9ed6c1892f629ea399f4ee7905f2686fa13f2",
       "src": "https://github.com/nvim-treesitter/nvim-treesitter",
