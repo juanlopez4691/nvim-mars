@@ -10,10 +10,14 @@
 local M = {}
 
 --- Install (if needed) and register plugins without loading their
---- `plugin/`/`ftdetect/` scripts.
+--- `plugin/`/`ftdetect/` scripts. Skips the install confirmation prompt:
+--- the plugin list is already reviewed by editing this config, so asking
+--- again on first run is just friction (unlike `vim.pack.update()`, where
+--- reviewing a diff of *changes* is genuinely useful and left at its
+--- default).
 ---@param specs (string|vim.pack.Spec)[]
 function M.add(specs)
-  vim.pack.add(specs, { load = false })
+  vim.pack.add(specs, { load = false, confirm = false })
 end
 
 --- Defer `opts.config()` until one of the given triggers fires. Runs at most
