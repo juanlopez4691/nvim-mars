@@ -83,6 +83,16 @@ wants file-type/git/diagnostic glyphs (statusline, winbar, dashboard,
 diagnostics signs, ...) must gate them behind that flag and fall back to
 plain text/Unicode symbols when it's unset.
 
+Read the flag **when the glyph is used**, never at module-require time.
+`lua/mars/local.lua`, where users actually set it, is loaded last, after
+every `require_dir` call, so a module-level `local icons =
+vim.g.have_nerd_font and {...} or {...}` freezes to the fallback before the
+user's value exists, and the Nerd Font branch becomes dead code. The same
+applies to any other user-tunable global: resolve it at point of use, and
+don't memoize it in an upvalue. When verifying icon behaviour, set the flag
+through `lua/mars/local.lua` rather than presetting the global in the test
+harness: otherwise the test passes while real startup doesn't.
+
 ## Build, Reload, and Health
 
 - Build: No manual build; Neovim loads config automatically.
