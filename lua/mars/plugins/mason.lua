@@ -12,8 +12,23 @@ require("mars.pack").add({
 --- Tools this config expects to stay installed, keyed by their name in
 --- Mason's own registry (`:Mason` to browse it).
 local ensure_installed = {
-  "taplo",
+  "blade-formatter",
+  "docker-compose-language-service",
+  "dockerfile-language-server",
+  "intelephense",
   "json-lsp",
+  "lua-language-server",
+  "marksman",
+  "php-cs-fixer",
+  "php-debug-adapter",
+  "phpcbf",
+  "phpcs",
+  "phpstan",
+  "pint",
+  "prettierd",
+  "tailwindcss-language-server",
+  "taplo",
+  "vtsls",
 }
 
 --- Install every entry of `ensure_installed` that isn't on disk yet.
