@@ -65,6 +65,17 @@ anything.
   - `adalessa/laravel.nvim`: Laravel-specific pickers/commands (upstream,
     not a local fork).
   - `blade-nav.nvim`: Blade tag-completion source.
+- **Considered and declined** (don't re-propose these without a concrete gap
+  to point at):
+  - `diffview.nvim`: the floating lazygit integration
+    (`lua/mars/core/lazygit.lua`) covers diff review, and `:diffthis` plus
+    gitsigns' `<leader>ghd` cover in-buffer diffing.
+  - `gitlineage.nvim`: blame and history are covered by gitsigns
+    (`<leader>ghb`, `<leader>ghB`) and by lazygit.
+  - `trouble.nvim`: `vim.diagnostic.setqflist()`/`setloclist()` populate the
+    native quickfix and location lists; see `lua/mars/core/diagnostics.lua`.
+  - `todo-comments.nvim` / `mini.hipatterns`: reproduced natively with
+    extmarks in `lua/mars/ui/patterns.lua`.
 - **No plugin manager framework, no dashboard/explorer/statusline/notifier
   toolkit plugin, no theme plugin.** The colorscheme is Neovim's built-in
   `default` for now. The statusline, winbar, dashboard, notifications,
