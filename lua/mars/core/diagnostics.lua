@@ -330,6 +330,37 @@ vim.api.nvim_create_autocmd("WinResized", {
 -- for the current buffer, plus errors-only variants of each. Opens the
 -- resulting window itself so there's no extra `:copen`/`:lopen` step.
 
+local M = {}
+
+local QUICKFIX_TYPE_NAMES = { E = "error", W = "warn", I = "info", N = "note" }
+
+--- 'quickfixtextfunc' implementation: shortens the file path (relative to
+--- cwd when the file is under it, absolute otherwise; the same technique
+--- :help quickfix-window-function itself recommends) instead of Neovim's
+--- own default, which always shows the full path and crowds out the
+--- message entirely on a deeply nested project path.
+---@param info { quickfix: integer, winid: integer, id: integer, start_idx: integer, end_idx: integer }
+---@return string[]
+function M.quickfix_text(info)
+  local items = info.quickfix == 1 and vim.fn.getqflist({ id = info.id, items = 1 }).items
+    or vim.fn.getloclist(info.winid, { id = info.id, items = 1 }).items
+
+  local lines = {}
+  for i = info.start_idx, info.end_idx do
+    local item = items[i]
+    local fname = item.bufnr > 0 and vim.fn.fnamemodify(vim.fn.bufname(item.bufnr), ":p:.") or ""
+    local pos = ("%d col %d"):format(item.lnum, item.col)
+    if item.end_col and item.end_col > item.col then
+      pos = pos .. "-" .. item.end_col
+    end
+    local kind = QUICKFIX_TYPE_NAMES[item.type] or ""
+    lines[#lines + 1] = ("%s|%s %s| %s"):format(fname, pos, kind, (item.text:gsub("\n", " ")))
+  end
+  return lines
+end
+
+vim.o.quickfixtextfunc = "v:lua.require'mars.core.diagnostics'.quickfix_text"
+
 --- Populates and opens the quickfix list with every diagnostic in the
 --- workspace, optionally restricted to a minimum severity. Relies on
 --- `setqflist`'s own `open` option rather than a separate `:copen`, since
@@ -388,3 +419,5 @@ vim.keymap.set(
   "<cmd>MarsDiagnosticsBufferErrors<cr>",
   { silent = true, desc = "Code: buffer errors to location list" }
 )
+
+return M
