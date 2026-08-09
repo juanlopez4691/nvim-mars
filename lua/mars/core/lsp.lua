@@ -47,3 +47,37 @@ vim.api.nvim_create_autocmd("LspAttach", {
     end
   end,
 })
+
+vim.api.nvim_create_autocmd("LspAttach", {
+  callback = function(ev)
+    local client = vim.lsp.get_client_by_id(ev.data.client_id)
+    if not client or client.name ~= "vtsls" then
+      return
+    end
+
+    vim.keymap.set(
+      "n",
+      "gD",
+      vim.lsp.buf.type_definition,
+      { buffer = ev.buf, silent = true, desc = "Go to source definition" }
+    )
+    vim.keymap.set("n", "gR", function()
+      vim.lsp.buf.references({ includeDeclaration = false })
+    end, { buffer = ev.buf, silent = true, desc = "File references" })
+    vim.keymap.set("n", "<leader>cM", function()
+      vim.lsp.buf.code_action({
+        context = { only = { "source.addMissingImports.ts" } },
+        apply = true,
+      })
+    end, { buffer = ev.buf, silent = true, desc = "Add missing imports" })
+    vim.keymap.set("n", "<leader>cD", function()
+      vim.lsp.buf.code_action({
+        context = { only = { "source.fixAll.ts" } },
+        apply = true,
+      })
+    end, { buffer = ev.buf, silent = true, desc = "Fix-all diagnostics" })
+    vim.keymap.set("n", "<leader>cV", function()
+      vim.lsp.buf.execute_command({ command = "typescript.selectTypeScriptVersion", arguments = {} })
+    end, { buffer = ev.buf, silent = true, desc = "Select TypeScript workspace version" })
+  end,
+})
