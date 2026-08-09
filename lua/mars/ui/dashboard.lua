@@ -443,10 +443,16 @@ local function open()
   vim.wo[win].spell = false
   vim.wo[win].wrap = false
 
+  -- 'laststatus' is global, not per-window (unlike everything above), so it
+  -- needs its own save/restore rather than living in saved_options.
+  local saved_laststatus = vim.o.laststatus
+  vim.o.laststatus = 0
+
   vim.api.nvim_create_autocmd("BufWipeout", {
     buffer = buf,
     once = true,
     callback = function()
+      vim.o.laststatus = saved_laststatus
       if vim.api.nvim_win_is_valid(win) then
         for option, value in pairs(saved_options) do
           vim.wo[win][option] = value
