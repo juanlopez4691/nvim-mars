@@ -1,7 +1,7 @@
 -- Native completion via vim.lsp.completion (Neovim >= 0.11), buffer-word
 -- matching, and path expansion. No completion plugin; see AGENTS.md's
--- Native-First Philosophy. Ghost-text/inline preview is not possible with
--- native completion; that's a known gap.
+-- Native-First Philosophy. Ghost-text/inline preview has no native
+-- equivalent; that's a known gap.
 
 local M = {}
 
@@ -146,12 +146,100 @@ if vim.api.nvim__complete_set then
   end
 end
 
+-- blink.cmp-style item decoration through vim.lsp.completion's convert
+-- hook: a kind icon prefixing the label (only when vim.g.have_nerd_font is
+-- set, read per request, never cached, per AGENTS.md), an "[LSP]" source
+-- label in the trailing column, and kind-tinted label text via standard
+-- highlight groups. Ghost text has no native equivalent; known gap.
+local KIND_ICONS = {
+  Text = "󰉿",
+  Method = "󰆧",
+  Function = "󰊕",
+  Constructor = "",
+  Field = "󰜢",
+  Variable = "󰀫",
+  Class = "󰠱",
+  Interface = "",
+  Module = "",
+  Property = "󰜢",
+  Unit = "󰑭",
+  Value = "󰎠",
+  Enum = "",
+  Keyword = "󰌋",
+  Snippet = "",
+  Color = "󰏘",
+  File = "󰈙",
+  Reference = "󰈇",
+  Folder = "󰉋",
+  EnumMember = "",
+  Constant = "󰏿",
+  Struct = "󰙅",
+  Event = "",
+  Operator = "󰆕",
+  TypeParameter = "",
+}
+
+--- Maps LSP kinds to standard highlight groups, tinting the label like
+--- colorful-menu does for blink.cmp. Groups a scheme doesn't define render
+--- as plain text.
+local KIND_HLGROUPS = {
+  Method = "@function",
+  Function = "@function",
+  Constructor = "@constructor",
+  Field = "@property",
+  Property = "@property",
+  Variable = "@variable",
+  Class = "@type",
+  Interface = "@type",
+  Struct = "@type",
+  Enum = "@type",
+  TypeParameter = "@type",
+  EnumMember = "@constant",
+  Constant = "@constant",
+  Value = "@constant",
+  Unit = "@number",
+  Keyword = "@keyword",
+  Operator = "@operator",
+  Event = "@operator",
+  Module = "@module",
+  File = "@string.special.path",
+  Folder = "@string.special.path",
+  Color = "@constant",
+  Snippet = "@string.special",
+  Reference = "@markup.link",
+}
+
+--- Decorates an LSP completion item for vim.lsp.completion's convert hook.
+---@param item lsp.CompletionItem
+---@return table
+local function convert_item(item)
+  local kind_name = vim.lsp.protocol.CompletionItemKind[item.kind] or "Text"
+  local converted = { menu = "[LSP]" }
+
+  if vim.g.have_nerd_font then
+    local icon = KIND_ICONS[kind_name] or KIND_ICONS.Text
+    local detail = vim.tbl_get(item, "labelDetails", "detail") or ""
+    converted.abbr = ("%s %s%s"):format(icon, item.label, detail)
+    converted.kind = ""
+  end
+
+  -- Core already strikes through deprecated items via abbr_hlgroup; don't
+  -- clobber that with a kind tint.
+  local deprecated = item.deprecated or vim.list_contains(item.tags or {}, vim.lsp.protocol.CompletionTag.Deprecated)
+  if not deprecated then
+    converted.abbr_hlgroup = KIND_HLGROUPS[kind_name]
+    converted.kind_hlgroup = KIND_HLGROUPS[kind_name]
+  end
+
+  return converted
+end
+
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(ev)
     local client = assert(vim.lsp.get_client_by_id(ev.data.client_id))
     vim.bo[ev.buf].complete = ".,w,b,u,t,i,kspell"
     if client:supports_method("textDocument/completion") then
-      vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
+      vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true, convert = convert_item })
     end
   end,
 })
