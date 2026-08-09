@@ -181,7 +181,13 @@ function M.jump()
 
   local label = get_char()
   clear(buf)
-  vim.cmd("redraw")
+  -- Forced full redraw, not the plain incremental one used above: the
+  -- overlay extmarks replaced real character cells, and some
+  -- terminals/multiplexers don't reliably repaint every affected cell on a
+  -- plain `redraw` once those extmarks are gone, leaving stale label
+  -- glyphs ("ghost" characters) on screen until an unrelated later redraw
+  -- (e.g. opening the cmdline) forces a real repaint over top of them.
+  vim.cmd("redraw!")
 
   if not label then
     return
