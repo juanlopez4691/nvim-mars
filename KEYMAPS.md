@@ -129,6 +129,7 @@ erroring.
 
 | Key           | Mode | Action                        |
 | ------------- | ---- | -------------------------------- |
+| `<leader>ll`  | n    | Main Laravel picker (all commands, master menu) |
 | `<leader>la`  | n    | Artisan command picker         |
 | `<leader>lr`  | n    | Routes picker                  |
 | `<leader>lm`  | n    | Make (scaffolding) picker      |
@@ -137,6 +138,7 @@ erroring.
 | `<leader>lt`  | n    | Run the "actions" command       |
 | `<leader>lu`  | n    | Open the Artisan Hub            |
 | `<leader>lp`  | n    | Open the Command Center         |
+| `<c-g>`       | n    | Resource-aware view finder (`view:finder`): not `<leader>l`-prefixed, but same source and guard |
 
 See also `gf` in [Ungrouped / raw keymaps](#ungrouped--raw-keymaps): a
 Laravel-aware resource jump that falls through to native `gf` outside a

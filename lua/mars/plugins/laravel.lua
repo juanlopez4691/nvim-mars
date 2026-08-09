@@ -108,6 +108,7 @@ local function command(name)
   end
 end
 
+vim.keymap.set("n", "<leader>ll", picker("laravel"), { desc = "Laravel Picker" })
 vim.keymap.set("n", "<leader>la", picker("artisan"), { desc = "Artisan Picker" })
 vim.keymap.set("n", "<leader>lr", picker("routes"), { desc = "Routes Picker" })
 vim.keymap.set("n", "<leader>lm", picker("make"), { desc = "Make Picker" })
@@ -116,6 +117,7 @@ vim.keymap.set("n", "<leader>lo", picker("resources"), { desc = "Resources Picke
 vim.keymap.set("n", "<leader>lt", command("actions"), { desc = "Actions" })
 vim.keymap.set("n", "<leader>lu", command("hub"), { desc = "Hub" })
 vim.keymap.set("n", "<leader>lp", command("command_center"), { desc = "Command Center" })
+vim.keymap.set("n", "<c-g>", command("view:finder"), { desc = "View Finder" })
 
 -- Defers to laravel.nvim's resource-aware jump (route()/view()/config()/
 -- env()/Inertia::render() strings under the cursor) when this is a Laravel
