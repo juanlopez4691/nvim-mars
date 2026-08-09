@@ -47,6 +47,21 @@ require("mars.pack").on({
 
     require("which-key").setup({
       icons = { keys = key_icons },
+      -- Vertical list instead of the default multi-column grid: cap the
+      -- popup at one readable-width column, then force exactly one column
+      -- by setting layout.width.min above any width that column could
+      -- realistically take (which-key clamps it back down to the popup's
+      -- own width (see its layout.lua), so this always resolves to
+      -- "exactly as wide as the popup", never more than one fits).
+      win = {
+        width = { min = 40, max = 60 },
+        -- which-key's own default (win.lua) is col=0 (flush left); math.huge
+        -- mirrors its *own* row=math.huge default trick; Layout.dim clamps
+        -- it down to the largest valid position, i.e. flush right instead.
+        col = math.huge,
+        border = require("mars.ui.borders").style(),
+      },
+      layout = { width = { min = 999 } },
     })
 
     -- Leader-key group labels. Keymaps land later alongside the features
@@ -73,6 +88,7 @@ require("mars.pack").on({
       group("<leader>r", "Replace"),
       group("<leader>s", "Search & replace"),
       group("<leader>t", "Terminal"),
+      group("<leader>u", "UI toggles"),
       group("<leader>y", "Yank"),
     })
   end,
