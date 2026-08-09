@@ -27,15 +27,47 @@ local ICONS = {
 
 local HEADER = vim.split(
   [[
- __  __    _    ____  ____
-|  \/  |  / \  |  _ \/ ___|
-| |\/| | / _ \ | |_) \___ \
-| |  | |/ ___ \|  _ < ___) |
-|_|  |_/_/   \_\_| \_\____/
+ __    __             __       __
+/  \  /  |           /  \     /  |
+██  \ ██ | __     __ ██  \   /██ |  ______    ______    _______
+███  \██ |/  \   /  |███  \ /███ | /      \  /      \  /       |
+████  ██ |██  \ /██/ ████  /████ | ██████  |/██████  |/███████/
+██ ██ ██ | ██  /██/  ██ ██ ██/██ | /    ██ |██ |  ██/ ██      \
+██ |████ |  ██ ██/   ██ |███/ ██ |/███████ |██ |       ██████  |
+██ | ███ |   ███/    ██ | █/  ██ |██    ██ |██ |      /     ██/
+██/   ██/     █/     ██/      ██/  ███████/ ██/       ███████/
 ]],
   "\n",
   { trimempty = true }
 )
+
+-- Right-pad every header line to the same width. render()'s per-line
+-- centering computes each row's own left margin from its own length, so
+-- rows shorter than the widest one -- trailing whitespace in a raw
+-- multi-line string literal isn't reliably preserved through every step --
+-- would get centered independently and throw the letterforms' column
+-- alignment off, even though the underlying glyphs are correctly aligned.
+do
+  local max_width = 0
+  for _, line in ipairs(HEADER) do
+    max_width = math.max(max_width, vim.fn.strdisplaywidth(line))
+  end
+  for i, line in ipairs(HEADER) do
+    HEADER[i] = line .. (" "):rep(max_width - vim.fn.strdisplaywidth(line))
+  end
+end
+
+-- Dedicated group (not the shared "Title") so recoloring the header can't
+-- affect anything else that happens to use "Title" -- re-applied on every
+-- ColorScheme (re)load since the color is hardcoded, not derived from
+-- whatever palette is active.
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = vim.api.nvim_create_augroup("mars_dashboard_header", { clear = true }),
+  callback = function()
+    vim.api.nvim_set_hl(0, "MarsDashboardHeader", { fg = "#c1440e", bold = true })
+  end,
+})
+vim.api.nvim_set_hl(0, "MarsDashboardHeader", { fg = "#c1440e", bold = true })
 
 --- Time-of-day greeting.
 ---@return string
@@ -264,7 +296,7 @@ local function build_content()
 
   for _, line in ipairs(HEADER) do
     table.insert(lines, line)
-    add("Title")
+    add("MarsDashboardHeader")
   end
 
   table.insert(lines, "")
