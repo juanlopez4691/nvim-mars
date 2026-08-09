@@ -15,6 +15,37 @@ vim.cmd([[
   inoremap <expr> <CR>    pumvisible() ? "\<C-y>" : "\<CR>"
 ]])
 
+-- <C-f>/<C-b> scroll the documentation preview window one page down/up when
+-- the completion menu is open (blink.cmp-style); otherwise the keys keep
+-- their default insert-mode behavior. The scroll is deferred: changing
+-- another window is forbidden (E523) while an insert-mode expr mapping is
+-- being evaluated with the menu open. These mappings are noremap, so the
+-- fallback result performs the built-in action instead of recursing.
+---@param key string
+---@param scroll_cmd string
+local function scroll_preview(key, scroll_cmd)
+  return function()
+    local winid = vim.fn.pumvisible() == 1 and vim.fn.complete_info().preview_winid or nil
+    if winid and vim.api.nvim_win_is_valid(winid) then
+      vim.schedule(function()
+        if vim.api.nvim_win_is_valid(winid) then
+          pcall(vim.fn.win_execute, winid, scroll_cmd)
+        end
+      end)
+      return ""
+    end
+    return key
+  end
+end
+
+vim.keymap.set(
+  "i",
+  "<C-f>",
+  scroll_preview("<C-f>", "normal! \6"),
+  { expr = true, desc = "Scroll completion docs down" }
+)
+vim.keymap.set("i", "<C-b>", scroll_preview("<C-b>", "normal! \2"), { expr = true, desc = "Scroll completion docs up" })
+
 -- The documentation window shown next to the menu is the pum's preview
 -- window. Neovim's C code creates it with an explicit border="none", and
 -- 'pumborder' only covers the menu itself. Two creation paths, two hooks:
