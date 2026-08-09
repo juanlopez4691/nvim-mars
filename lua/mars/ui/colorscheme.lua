@@ -27,6 +27,12 @@ local function apply_overrides()
   local pmenu = vim.api.nvim_get_hl(0, { name = "Pmenu" })
   local chrome = vim.api.nvim_get_hl(0, { name = "NonText" })
   vim.api.nvim_set_hl(0, "PmenuBorder", { fg = chrome.fg, bg = pmenu.bg })
+
+  -- Float borders default to the editor background, forming a visible halo
+  -- around floating windows whose content uses the darker NormalFloat
+  -- background. Paint them on the float's own background instead (NormalFloat
+  -- links to Pmenu in the default scheme), in the same chrome color.
+  vim.api.nvim_set_hl(0, "FloatBorder", { fg = chrome.fg, bg = pmenu.bg })
 end
 
 vim.api.nvim_create_autocmd("ColorScheme", {
