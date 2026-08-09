@@ -23,6 +23,16 @@ local typescript_settings = {
 ---@type vim.lsp.Config
 return {
   cmd = { "vtsls", "--stdio" },
+  commands = {
+    ["_typescript.moveToFileRefactoring"] = function(result, ctx)
+      ---@type vim.lsp.ApplyWorkspaceEditParams
+      local params = {
+        edit = result.edit,
+        label = result.label,
+      }
+      vim.lsp.util.apply_workspace_edit(params, ctx.client_id)
+    end,
+  },
   init_options = {
     hostInfo = "neovim",
   },
