@@ -60,6 +60,11 @@ local MARGIN = 1
 local GAP = 1
 local MAX_WIDTH = 60
 
+-- Content padding, added around the message inside the border: one column
+-- of blank space left/right, one blank line above/below.
+local PAD_X = 1
+local PAD_Y = 1
+
 -- Must match the module path require_dir() derives for this file, so a
 -- manual :source of this buffer can find what an earlier load stashed here.
 local MODULE_NAME = "mars.ui.notify"
@@ -199,7 +204,8 @@ local function render(msg, level)
 
   local available = math.max(20, vim.o.columns - (MARGIN * 2) - 2)
   local width = math.min(MAX_WIDTH, available)
-  local text_width = math.max(1, width - vim.fn.strdisplaywidth(icon))
+  -- Reserve PAD_X columns on each side for the horizontal padding added below.
+  local text_width = math.max(1, width - vim.fn.strdisplaywidth(icon) - (PAD_X * 2))
 
   local lines = {}
   for i, body_line in ipairs(wrap_lines(msg, text_width)) do
@@ -209,15 +215,30 @@ local function render(msg, level)
     lines = { icon }
   end
 
-  local win_width = 1
+  local content_width = 1
   for _, line in ipairs(lines) do
-    win_width = math.max(win_width, vim.fn.strdisplaywidth(line))
+    content_width = math.max(content_width, vim.fn.strdisplaywidth(line))
   end
-  win_width = math.min(width, win_width)
+  content_width = math.min(width - (PAD_X * 2), content_width)
+  local win_width = content_width + (PAD_X * 2)
+
+  -- Inset each content line with PAD_X columns of blank space left/right,
+  -- then add PAD_Y blank lines above/below for vertical breathing room.
+  local left_pad = string.rep(" ", PAD_X)
+  local padded_lines = {}
+  for _ = 1, PAD_Y do
+    padded_lines[#padded_lines + 1] = ""
+  end
+  for _, line in ipairs(lines) do
+    padded_lines[#padded_lines + 1] = left_pad .. line .. left_pad
+  end
+  for _ = 1, PAD_Y do
+    padded_lines[#padded_lines + 1] = ""
+  end
 
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].bufhidden = "wipe"
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, padded_lines)
 
   local ok, win = pcall(vim.api.nvim_open_win, buf, false, {
     relative = "editor",
@@ -225,7 +246,7 @@ local function render(msg, level)
     row = MARGIN,
     col = vim.o.columns - MARGIN,
     width = win_width,
-    height = #lines,
+    height = #padded_lines,
     style = "minimal",
     border = require("mars.ui.borders").style(),
     focusable = false,
@@ -242,7 +263,7 @@ local function render(msg, level)
   vim.wo[win].winhighlight = ("Normal:NormalFloat,FloatBorder:%s"):format(hl)
 
   ---@type MarsNotifyEntry
-  local entry = { win = win, buf = buf, height = #lines + 2, timer = nil }
+  local entry = { win = win, buf = buf, height = #padded_lines + 2, timer = nil }
   active[#active + 1] = entry
 
   local timer = vim.uv.new_timer()
