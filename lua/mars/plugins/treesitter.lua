@@ -63,6 +63,7 @@ vim.api.nvim_create_autocmd("FileType", {
 -- attaching client supports it.
 vim.o.foldmethod = "expr"
 vim.o.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+vim.o.foldlevel = 99
 
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(ev)
