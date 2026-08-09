@@ -37,7 +37,6 @@ opt.termguicolors = true
 opt.laststatus = 3
 opt.showmode = false
 opt.ruler = false
-opt.pumblend = 10
 opt.pumheight = 12
 opt.pumwidth = 20
 opt.winminwidth = 5
