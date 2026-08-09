@@ -262,6 +262,23 @@ local dashboard_buf = nil
 --- trigger a redundant re-render.
 local dashboard_size = nil
 
+--- 1-indexed buffer rows the cursor is allowed to rest on, updated on every
+--- render() -- see the CursorMoved restriction set up in open().
+---@type integer[]
+local dashboard_action_rows = {}
+
+--- The last row restrict_cursor() settled on, used to tell which direction
+--- the cursor is travelling; reset to nil on every render() since a resize
+--- renumbers every row. nil means "no established direction yet" -- e.g.
+--- right after a render, or after the initial (unrestricted) placement.
+---@type integer?
+local dashboard_last_row = nil
+
+--- 1-indexed buffer row -> the menu action's `run`, updated on every
+--- render() -- see the <cr> handler set up in open().
+---@type table<integer, fun()>
+local dashboard_row_actions = {}
+
 ---@param action mars.dashboard.Action
 ---@return string text, string key_hl, string desc_hl
 local function format_action(action)
@@ -279,12 +296,18 @@ end
 --- independent blocks (see render()), since the wide ASCII art and the
 --- much narrower menu text would otherwise force the menu to share the
 --- art's left margin instead of genuinely centering on its own.
+--- `menu_items` pairs each actionable menu entry with its 1-indexed
+--- position -- everything else (header, blank lines, group labels) is
+--- unreachable by the cursor, see the CursorMoved restriction and the
+--- <cr> handler set up in open().
 ---@return string[] lines
 ---@return {line: integer, col_start: integer, col_end: integer, hl: string}[] highlights
 ---@return integer header_count
+---@return {line: integer, run: fun()}[] menu_items
 local function build_content()
   local lines = {}
   local highlights = {}
+  local menu_items = {}
 
   local function add(hl, col_start, col_end)
     table.insert(highlights, {
@@ -318,6 +341,7 @@ local function build_content()
     for _, action in ipairs(actions) do
       local text, key_hl, desc_hl = format_action(action)
       table.insert(lines, text)
+      table.insert(menu_items, { line = #lines, run = action.run })
       local key_end = 1 + #action.key + 1 -- "[" + key + "]"
       add(key_hl, 0, key_end)
       add(desc_hl, key_end, -1)
@@ -331,7 +355,7 @@ local function build_content()
   -- Drop the trailing blank line added by the last group.
   lines[#lines] = nil
 
-  return lines, highlights, header_count
+  return lines, highlights, header_count, menu_items
 end
 
 ---@param lines string[]
@@ -380,10 +404,19 @@ local function render()
     return
   end
 
-  local lines, highlights, header_count = build_content()
+  local lines, highlights, header_count, menu_items = build_content()
   local win_width = vim.api.nvim_win_get_width(win)
   local win_height = vim.api.nvim_win_get_height(win)
   local top_margin = math.max(0, math.floor((win_height - #lines) / 2))
+
+  dashboard_action_rows = {}
+  dashboard_row_actions = {}
+  dashboard_last_row = nil
+  for _, item in ipairs(menu_items) do
+    local row = top_margin + item.line
+    table.insert(dashboard_action_rows, row)
+    dashboard_row_actions[row] = item.run
+  end
 
   local header_lines = { unpack(lines, 1, header_count) }
   local menu_lines = { unpack(lines, header_count + 1, #lines) }
@@ -432,6 +465,63 @@ local function render()
       hl_group = hl.hl,
     })
   end
+end
+
+--- Snaps the cursor onto the nearest actionable menu row (and its first
+--- non-blank column) -- mirrors snacks.dashboard's own cursor restriction
+--- The header and blank padding aren't interactive,
+--- so wandering onto them just invites accidental edits on a
+--- non-modifiable buffer with no useful feedback.
+local function restrict_cursor()
+  if #dashboard_action_rows == 0 or not dashboard_buf or not vim.api.nvim_buf_is_valid(dashboard_buf) then
+    return
+  end
+  local win = vim.fn.bufwinid(dashboard_buf)
+  if win == -1 then
+    return
+  end
+
+  local target = vim.api.nvim_win_get_cursor(win)[1]
+  local row = dashboard_row_actions[target] and target or nil
+
+  -- Landed on a gap (blank line or group label): skip in the direction of
+  -- travel to the next actionable row, so stepping with j/k walks straight
+  -- past a multi-line gap (e.g. into the next group) instead of always
+  -- snapping back to whichever edge happens to be numerically closer.
+  if not row and dashboard_last_row then
+    if target > dashboard_last_row then
+      for _, candidate in ipairs(dashboard_action_rows) do
+        if candidate > target then
+          row = candidate
+          break
+        end
+      end
+    else
+      for i = #dashboard_action_rows, 1, -1 do
+        if dashboard_action_rows[i] < target then
+          row = dashboard_action_rows[i]
+          break
+        end
+      end
+    end
+  end
+
+  -- No established direction yet (fresh render), or travel overshot past
+  -- an end with nothing left to skip to: fall back to nearest by distance.
+  if not row then
+    row = dashboard_action_rows[1]
+    for _, candidate in ipairs(dashboard_action_rows) do
+      if math.abs(candidate - target) < math.abs(row - target) then
+        row = candidate
+      end
+    end
+  end
+
+  dashboard_last_row = row
+
+  local line = vim.api.nvim_buf_get_lines(dashboard_buf, row - 1, row, false)[1] or ""
+  local col = (line:find("%S") or 1) - 1
+  vim.api.nvim_win_set_cursor(win, { row, col })
 end
 
 --- Whether the current buffer/invocation is eligible for the dashboard: no
@@ -522,9 +612,22 @@ local function open()
   for _, action in ipairs(MAINTENANCE_ACTIONS) do
     vim.keymap.set("n", action.key, action.run, { buffer = buf, nowait = true, silent = true })
   end
+  vim.keymap.set("n", "<cr>", function()
+    local row = vim.api.nvim_win_get_cursor(win)[1]
+    local run = dashboard_row_actions[row]
+    if run then
+      run()
+    end
+  end, { buffer = buf, nowait = true, silent = true, desc = "Run the menu entry under the cursor" })
 
   render()
   dashboard_size = current_size()
+  restrict_cursor()
+
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    buffer = buf,
+    callback = restrict_cursor,
+  })
 end
 
 vim.api.nvim_create_autocmd("VimEnter", {
@@ -558,6 +661,7 @@ vim.api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
       if size and not vim.deep_equal(size, dashboard_size) then
         dashboard_size = size
         render()
+        restrict_cursor()
       end
     end)
   end,
