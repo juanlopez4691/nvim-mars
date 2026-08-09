@@ -32,11 +32,14 @@ opt.grepformat = "%f:%l:%c:%m"
 
 -- UI
 opt.number = true -- relativenumber is toggled dynamically based on mode/window focus
--- Two fixed columns, not one: with a single column, a gitsigns hunk marker
--- and a diagnostic sign on the same line compete for the one slot and only
--- the higher-priority one renders; widening avoids that silently hiding
--- whichever loses.
-opt.signcolumn = "yes:2"
+-- Auto-sized between 1 and 2 columns rather than a fixed single column:
+-- with just one, a gitsigns hunk marker and a diagnostic sign on the same
+-- line compete for that one slot and only the higher-priority one renders,
+-- silently hiding whichever loses. "auto" (not "yes:2") keeps the gutter
+-- at 1 column, as narrow as a fixed single column already was, on any
+-- screen where nothing's currently double-stacked, only widening to 2 when
+-- a visible line actually needs both at once.
+opt.signcolumn = "auto:1-2"
 opt.termguicolors = true
 opt.laststatus = 3
 opt.showmode = false
