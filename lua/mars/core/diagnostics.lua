@@ -1,6 +1,6 @@
--- Native diagnostics config: current-line-only virtual text approximates
--- the inline, powerline-style look of a plugin like tiny-inline-diagnostic
--- without one. Icons fall back in three tiers: Nerd Font glyphs
+-- Native diagnostics config: always-on inline virtual text approximates the
+-- look of a plugin like tiny-inline-diagnostic without one. Icons fall back
+-- in three tiers: Nerd Font glyphs
 -- (vim.g.have_nerd_font opt-in, see AGENTS.md's Icons section), Unicode
 -- symbols (the default), or plain ASCII letters (vim.g.mars_ascii_diagnostics
 -- opt-in, for terminals/log viewers that don't render Unicode reliably;
@@ -54,7 +54,6 @@ local function apply()
     severity_sort = true,
     signs = { text = diagnostic_icons() },
     virtual_text = {
-      current_line = true,
       spacing = 2,
       source = "if_many",
       prefix = function(diagnostic)
