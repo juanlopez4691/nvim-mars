@@ -397,6 +397,22 @@ local function open()
   vim.bo[buf].filetype = "marsdashboard"
 
   local win = vim.api.nvim_get_current_win()
+  -- Window-local options, captured before being clobbered below so they can
+  -- be restored once the dashboard buffer is gone. Without this, opening a
+  -- real file into the dashboard's own window (its usual find-file/recent
+  -- actions do exactly that) silently inherits signcolumn="no" and the rest
+  -- Window-local options don't reset just because the buffer changed.
+  local saved_options = {
+    number = vim.wo[win].number,
+    relativenumber = vim.wo[win].relativenumber,
+    cursorline = vim.wo[win].cursorline,
+    list = vim.wo[win].list,
+    signcolumn = vim.wo[win].signcolumn,
+    foldenable = vim.wo[win].foldenable,
+    spell = vim.wo[win].spell,
+    wrap = vim.wo[win].wrap,
+  }
+
   vim.wo[win].number = false
   vim.wo[win].relativenumber = false
   vim.wo[win].cursorline = false
@@ -405,6 +421,18 @@ local function open()
   vim.wo[win].foldenable = false
   vim.wo[win].spell = false
   vim.wo[win].wrap = false
+
+  vim.api.nvim_create_autocmd("BufWipeout", {
+    buffer = buf,
+    once = true,
+    callback = function()
+      if vim.api.nvim_win_is_valid(win) then
+        for option, value in pairs(saved_options) do
+          vim.wo[win][option] = value
+        end
+      end
+    end,
+  })
 
   for _, action in ipairs(ACTIONS) do
     vim.keymap.set("n", action.key, action.run, { buffer = buf, nowait = true, silent = true })
