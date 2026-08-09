@@ -224,6 +224,11 @@ local MAINTENANCE_ACTIONS = {
 --- Buffer currently holding the dashboard, if any.
 local dashboard_buf = nil
 
+--- {width, height} last rendered at, so a resize event that doesn't
+--- actually change this window's size (e.g. a split elsewhere) doesn't
+--- trigger a redundant re-render.
+local dashboard_size = nil
+
 ---@param action mars.dashboard.Action
 ---@return string text, string key_hl, string desc_hl
 local function format_action(action)
@@ -303,7 +308,23 @@ local function is_menu_line(line)
   return line:match("^%[") ~= nil or line == "Maintenance"
 end
 
---- Renders (or re-renders, e.g. after VimResized) the dashboard into its
+--- The window's current {width, height}, or nil if the dashboard isn't
+--- shown anywhere. Compared before re-rendering on a resize event so a
+--- resize that doesn't actually affect this window (e.g. a split
+--- elsewhere) doesn't trigger a redundant re-render.
+---@return integer[]? size {width, height}
+local function current_size()
+  if not dashboard_buf or not vim.api.nvim_buf_is_valid(dashboard_buf) then
+    return nil
+  end
+  local win = vim.fn.bufwinid(dashboard_buf)
+  if win == -1 then
+    return nil
+  end
+  return { vim.api.nvim_win_get_width(win), vim.api.nvim_win_get_height(win) }
+end
+
+--- Renders (or re-renders, e.g. after a resize) the dashboard into its
 --- buffer, centered in whichever window currently shows it. Header and
 --- greeting are centered within the menu block; menu entries stay
 --- left-aligned within it, matching how the shared left margin is applied.
@@ -442,6 +463,7 @@ local function open()
   end
 
   render()
+  dashboard_size = current_size()
 end
 
 vim.api.nvim_create_autocmd("VimEnter", {
@@ -455,7 +477,23 @@ vim.api.nvim_create_autocmd("VimEnter", {
   end,
 })
 
-vim.api.nvim_create_autocmd("VimResized", {
+-- Deferred to the next tick, not read synchronously inside the event: at
+-- the exact moment WinResized/VimResized fires, Neovim's own internal
+-- geometry recalculation for this window isn't always finished yet, so
+-- nvim_win_get_width()/height() called immediately can still return a
+-- stale, pre-resize value; render() would then center against the wrong
+-- size, and nothing re-corrects it until another resize happens to come
+-- along later and read the (by then genuinely current) size. Scheduling
+-- gives Neovim's own resize handling a chance to finish first.
+vim.api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
   desc = "Re-center the Mars dashboard",
-  callback = render,
+  callback = function()
+    vim.schedule(function()
+      local size = current_size()
+      if size and not vim.deep_equal(size, dashboard_size) then
+        dashboard_size = size
+        render()
+      end
+    end)
+  end,
 })
