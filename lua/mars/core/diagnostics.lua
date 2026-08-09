@@ -148,23 +148,88 @@ end
 
 local CHIP_NAMESPACE = vim.api.nvim_create_namespace("mars_diagnostics_chip")
 
+--- Truncates `s` to at most `width` display columns (walking characters,
+--- not bytes, so multi-byte glyphs aren't split mid-character), appending
+--- an ellipsis when it doesn't already fit.
+---@param s string
+---@param width integer
+---@return string
+local function truncate_to_width(s, width)
+  if width <= 0 then
+    return ""
+  end
+  if vim.fn.strdisplaywidth(s) <= width then
+    return s
+  end
+  local ellipsis = "…"
+  local budget = width - vim.fn.strdisplaywidth(ellipsis)
+  if budget <= 0 then
+    return ellipsis
+  end
+  local last_fit = ""
+  for i = 1, vim.fn.strchars(s) do
+    local candidate = vim.fn.strcharpart(s, 0, i)
+    if vim.fn.strdisplaywidth(candidate) > budget then
+      break
+    end
+    last_fit = candidate
+  end
+  return last_fit .. ellipsis
+end
+
+--- The text-display width of the first window currently showing `bufnr`
+--- (excluding sign/number/fold columns), or nil if none is visible. Chips
+--- are buffer-scoped extmarks shared by every window on that buffer, so
+--- this only optimizes for one of them; the same documented trade-off
+--- lua/mars/ui/indent.lua's scope highlighting makes for split windows.
+---@param bufnr integer
+---@return integer?
+local function window_text_width(bufnr)
+  local win = vim.fn.bufwinid(bufnr)
+  if win == -1 then
+    return nil
+  end
+  local info = vim.fn.getwininfo(win)[1]
+  return vim.api.nvim_win_get_width(win) - (info and info.textoff or 0)
+end
+
 --- Draws one chip extmark at the end of `lnum` (0-indexed): a two-space gap,
---- the arrow, then the icon and message sharing the chip background.
+--- the arrow, then the icon and message sharing the chip background, a
+--- single line, always. Wrapping this onto extra lines (tried and reverted)
+--- pushes the rest of the buffer down by the wrapped height and stops
+--- looking like a compact chip at all; a message too long for the room
+--- left on `lnum` is truncated with an ellipsis instead, same as any
+--- other overflowing UI text in this config (e.g. lua/mars/ui/notify.lua).
 ---@param bufnr integer
 ---@param lnum integer
 ---@param diag vim.Diagnostic
-local function render_chip(bufnr, lnum, diag)
+---@param text_width integer?
+local function render_chip(bufnr, lnum, diag, text_width)
   local hl = CHIP_HL[diag.severity]
   local arrow_hl = ARROW_HL[diag.severity]
   if not (hl and arrow_hl) then
     return
   end
   local icon = diagnostic_icons()[diag.severity] or ""
+  local arrow = diagnostic_arrow()
   local message = diag.message:gsub("\r", ""):gsub("\n", "  ")
+
+  if text_width then
+    local line = vim.api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)[1] or ""
+    -- Fixed-width parts: the 2-space gap, the arrow, and one padding space
+    -- on each side of icon+message (see the virt_text chunks below).
+    local fixed = 2 + vim.fn.strdisplaywidth(arrow) + 2 + vim.fn.strdisplaywidth(icon)
+    local available = text_width - vim.fn.strdisplaywidth(line) - fixed
+    message = truncate_to_width(message, available)
+    if message == "" then
+      return
+    end
+  end
+
   pcall(vim.api.nvim_buf_set_extmark, bufnr, CHIP_NAMESPACE, lnum, -1, {
     virt_text = {
       { "  " },
-      { diagnostic_arrow(), arrow_hl },
+      { arrow, arrow_hl },
       { " " .. icon .. message .. " ", hl },
     },
     virt_text_pos = "eol",
@@ -188,8 +253,9 @@ local function refresh_chips(bufnr)
       worst_by_line[diag.lnum] = diag
     end
   end
+  local text_width = window_text_width(bufnr)
   for lnum, diag in pairs(worst_by_line) do
-    render_chip(bufnr, lnum, diag)
+    render_chip(bufnr, lnum, diag, text_width)
   end
 end
 
@@ -243,6 +309,20 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
   group = augroup,
   callback = function(ev)
     refresh_chips(ev.buf)
+  end,
+})
+
+-- Re-truncate affected buffers' chips when a window is resized (split
+-- opened/closed, manual resize, ...); otherwise a chip sized for the old
+-- width stays stale until its buffer's diagnostics next change.
+vim.api.nvim_create_autocmd("WinResized", {
+  group = augroup,
+  callback = function()
+    for _, win in ipairs(vim.v.event.windows or {}) do
+      if vim.api.nvim_win_is_valid(win) then
+        refresh_chips(vim.api.nvim_win_get_buf(win))
+      end
+    end
   end,
 })
 
