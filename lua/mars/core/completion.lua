@@ -1,13 +1,12 @@
 -- Native completion via vim.lsp.completion (Neovim >= 0.11), buffer-word
 -- matching, and path expansion. No completion plugin; see AGENTS.md's
--- Native-First Philosophy. Ghost-text/inline preview has no native
--- equivalent; that's a known gap.
+-- Native-First Philosophy.
 --
 -- Covers, top to bottom: popup keymaps, item decoration (kind icon, [LSP]
 -- label, kind tint), documentation-window styling (padding, border, wrap),
--- and LSP activation. The menu border comes from 'pumborder', applied
--- centrally by lua/mars/ui/borders.lua; pumwidth/pumheight are in
--- options.lua.
+-- ghost-text preview, and LSP activation. The menu border comes from
+-- 'pumborder', applied centrally by lua/mars/ui/borders.lua; pumwidth/
+-- pumheight are in options.lua.
 
 local M = {}
 
@@ -241,6 +240,68 @@ if vim.api.nvim__complete_set then
     return windata
   end
 end
+
+-- Ghost-text preview
+
+-- 'completeopt' includes noselect, so selecting an item in the menu never
+-- touches the buffer on its own (unlike the classic pum behavior); this
+-- fills that gap with a dimmed inline preview of the rest of the selected
+-- item's text, the way blink.cmp/nvim-cmp show ghost text.
+vim.api.nvim_set_hl(0, "MarsCompletionGhostText", { link = "Comment", default = true })
+
+local ghost_ns = vim.api.nvim_create_namespace("mars_completion_ghost_text")
+
+--- Clears any ghost-text extmark in the current buffer.
+local function clear_ghost_text()
+  vim.api.nvim_buf_clear_namespace(0, ghost_ns, 0, -1)
+end
+
+--- The identifier characters immediately before the cursor, the text the
+--- completion menu is actually matching against.
+---@return string
+local function typed_prefix()
+  local col = vim.fn.col(".")
+  local line = vim.api.nvim_get_current_line()
+  return line:sub(1, col - 1):match("[%w_]*$") or ""
+end
+
+--- Renders `word`'s remaining suffix (beyond what's already typed) as
+--- inline virtual text right at the cursor. Skipped when `word` isn't a
+--- literal continuation of the typed text; under 'fuzzy' matching a
+--- selected item doesn't always share a literal prefix with it, and a
+--- suffix computed from a non-prefix match would preview the wrong text.
+---@param word string?
+local function show_ghost_text(word)
+  clear_ghost_text()
+  if not word or word == "" then
+    return
+  end
+
+  local prefix = typed_prefix()
+  if prefix == "" or word:sub(1, #prefix) ~= prefix then
+    return
+  end
+  local suffix = word:sub(#prefix + 1)
+  if suffix == "" then
+    return
+  end
+
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  vim.api.nvim_buf_set_extmark(0, ghost_ns, cursor[1] - 1, cursor[2], {
+    virt_text = { { suffix, "MarsCompletionGhostText" } },
+    virt_text_pos = "inline",
+  })
+end
+
+vim.api.nvim_create_autocmd("CompleteChanged", {
+  callback = function()
+    pcall(show_ghost_text, vim.tbl_get(vim.v.event, "completed_item", "word"))
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "CompleteDone", "InsertLeave" }, {
+  callback = clear_ghost_text,
+})
 
 -- LSP activation
 
