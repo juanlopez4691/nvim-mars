@@ -279,15 +279,18 @@ local dashboard_last_row = nil
 ---@type table<integer, fun()>
 local dashboard_row_actions = {}
 
+--- The description half of a menu line -- icon (if any) plus label. The key
+--- itself is laid out separately (see add_group in build_content()), right
+--- -aligned at a shared column across every group.
 ---@param action mars.dashboard.Action
----@return string text, string key_hl, string desc_hl
+---@return string desc, string key_hl, string desc_hl
 local function format_action(action)
   local icon = vim.g.have_nerd_font and (action.icon .. " ") or ""
-  local text = ("[%s] %s%s"):format(action.key, icon, action.desc)
+  local desc = icon .. action.desc
   if action.available() then
-    return text, "Special", "Directory"
+    return desc, "Special", "Directory"
   end
-  return text, "Comment", "Comment"
+  return desc, "Comment", "Comment"
 end
 
 --- Builds the (unpadded) content lines plus per-line highlight ranges.
@@ -332,24 +335,39 @@ local function build_content()
   table.insert(lines, "")
   table.insert(lines, "")
 
-  local function add_group(actions, label)
-    if label then
-      table.insert(lines, label)
-      add("Comment")
-      table.insert(lines, "")
+  -- Every group's key is right-aligned at one shared column, computed from
+  -- the widest description across *both* groups, so the key column lines
+  -- up down the whole menu instead of just within one group. Alignment is
+  -- measured in display width, not byte length: with a Nerd Font enabled,
+  -- `desc` starts with an icon glyph, and Nerd Font codepoints don't all
+  -- encode to the same number of UTF-8 bytes even when they render at the
+  -- same cell width -- byte-based alignment would drift the key column.
+  local desc_width = 0
+  for _, group in ipairs({ ACTIONS, MAINTENANCE_ACTIONS }) do
+    for _, action in ipairs(group) do
+      desc_width = math.max(desc_width, vim.fn.strdisplaywidth((format_action(action))))
     end
+  end
+
+  local function add_group(actions, title)
+    table.insert(lines, title)
+    add("MarsDashboardHeader")
+    table.insert(lines, "")
     for _, action in ipairs(actions) do
-      local text, key_hl, desc_hl = format_action(action)
+      local desc, key_hl, desc_hl = format_action(action)
+      local gap = desc_width - vim.fn.strdisplaywidth(desc) + 2 -- 2-space minimum gap before the key
+      local text = desc .. (" "):rep(gap) .. action.key
       table.insert(lines, text)
       table.insert(menu_items, { line = #lines, run = action.run })
-      local key_end = 1 + #action.key + 1 -- "[" + key + "]"
-      add(key_hl, 0, key_end)
-      add(desc_hl, key_end, -1)
+      -- Extmark columns are byte offsets, unlike the display-width math
+      -- above -- #desc and #action.key are correct here.
+      add(desc_hl, 0, #desc)
+      add(key_hl, #text - #action.key, -1)
     end
     table.insert(lines, "")
   end
 
-  add_group(ACTIONS, nil)
+  add_group(ACTIONS, "Actions")
   add_group(MAINTENANCE_ACTIONS, "Maintenance")
 
   -- Drop the trailing blank line added by the last group.
@@ -520,7 +538,11 @@ local function restrict_cursor()
   dashboard_last_row = row
 
   local line = vim.api.nvim_buf_get_lines(dashboard_buf, row - 1, row, false)[1] or ""
-  local col = (line:find("%S") or 1) - 1
+  -- Skip past any leading Nerd Font icon: its bytes are outside Lua's ASCII
+  -- word/punctuation classes, so this lands on the first character of the
+  -- actual label instead of the cursor block sitting on top of the glyph
+  -- (mirrors snacks.dashboard's own cursor placement).
+  local col = (line:find("[%w%p]") or line:find("%S") or 1) - 1
   vim.api.nvim_win_set_cursor(win, { row, col })
 end
 
