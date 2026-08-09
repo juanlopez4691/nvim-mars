@@ -15,10 +15,12 @@ function M.style()
   return vim.g.mars_border_style or "rounded"
 end
 
---- Applies the current border style to winborder and diagnostic float config.
+--- Applies the current border style to winborder, pumborder, and the
+--- diagnostic float config.
 function M.setup()
   local s = M.style()
   vim.o.winborder = s
+  vim.o.pumborder = s
   vim.diagnostic.config({ float = { border = s } })
 end
 

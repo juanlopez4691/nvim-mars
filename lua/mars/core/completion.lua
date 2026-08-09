@@ -7,6 +7,10 @@ local M = {}
 
 vim.o.completeopt = "menu,menuone,noselect,popup,fuzzy"
 
+-- The popup menu and its documentation window get their border from
+-- 'pumborder', applied centrally by lua/mars/ui/borders.lua; pumwidth/
+-- pumheight in options.lua control sizing.
+
 vim.cmd([[
   inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
   inoremap <expr> <CR>    pumvisible() ? "\<C-y>" : "\<CR>"

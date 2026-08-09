@@ -17,6 +17,16 @@ local function apply_overrides()
   -- inactive statusline already does.
   vim.api.nvim_set_hl(0, "WinBar", { link = "Normal" })
   vim.api.nvim_set_hl(0, "WinBarNC", { link = "StatusLineNC" })
+
+  -- The completion popup menu border ('pumborder') defaults to Pmenu's own
+  -- foreground on the editor background. The bright fg reads louder than the
+  -- chrome color every other float border uses, and the mismatched bg forms
+  -- a visible halo between the pum's dark background and the border. Read
+  -- the border as chrome (NonText, same as window separators) painted on
+  -- the pum's own background instead.
+  local pmenu = vim.api.nvim_get_hl(0, { name = "Pmenu" })
+  local chrome = vim.api.nvim_get_hl(0, { name = "NonText" })
+  vim.api.nvim_set_hl(0, "PmenuBorder", { fg = chrome.fg, bg = pmenu.bg })
 end
 
 vim.api.nvim_create_autocmd("ColorScheme", {
