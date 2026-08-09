@@ -89,3 +89,29 @@ vim.g.loaded_perl_provider = 0
 
 -- Fix markdown indentation settings
 vim.g.markdown_recommended_style = 0
+
+-- Auto-reload when a file changes on disk. `checktime` redraws any buffers
+-- whose underlying file was modified externally; when multiple events fire
+-- close together (e.g. BufEnter then FocusGained), the 300ms timer ensures
+-- we only run one reload pass instead of N.
+local checktime_timer = nil
+vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained", "TermLeave", "TermClose" }, {
+  group = vim.api.nvim_create_augroup("mars_checktime", {}),
+  callback = function()
+    if checktime_timer then
+      return
+    end
+    checktime_timer = vim.defer_fn(function()
+      checktime_timer = nil
+      -- Confirm before reloading if the buffer has unsaved changes
+      if vim.bo.modified then
+        local choice = vim.fn.confirm("File changed on disk. Reload?", "&Yes\n&No", 2)
+        if choice == 1 then
+          vim.cmd("checktime")
+        end
+      else
+        vim.cmd("checktime")
+      end
+    end, 300)
+  end,
+})
