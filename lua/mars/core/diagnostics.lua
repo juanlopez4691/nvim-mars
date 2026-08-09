@@ -32,7 +32,7 @@ vim.diagnostic.config({
     end,
   },
   float = {
-    border = "rounded",
+    border = require("mars.ui.borders").style(),
     source = "if_many",
   },
 })

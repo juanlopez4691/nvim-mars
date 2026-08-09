@@ -53,7 +53,7 @@ local function win_geometry()
     row = math.floor((vim.o.lines - height) / 2),
     col = math.floor((vim.o.columns - width) / 2),
     style = "minimal",
-    border = "rounded",
+    border = require("mars.ui.borders").style(),
   }
 end
 

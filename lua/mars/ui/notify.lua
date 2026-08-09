@@ -227,7 +227,7 @@ local function render(msg, level)
     width = win_width,
     height = #lines,
     style = "minimal",
-    border = "rounded",
+    border = require("mars.ui.borders").style(),
     focusable = false,
     noautocmd = true,
     zindex = 200,

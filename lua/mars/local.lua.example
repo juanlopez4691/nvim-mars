@@ -7,6 +7,10 @@
 
 -- vim.g.have_nerd_font = true
 
+-- Floating window border style: "rounded" (default) | "single" | "solid" | "none"
+-- vim.g.mars_border_style = "single"
+-- require("mars.ui.borders").setup()
+
 -- vim.o.scrolloff = 8
 
 -- vim.keymap.set("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit all" })

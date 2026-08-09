@@ -8,6 +8,10 @@
 -- re-detecting per module.
 vim.g.have_nerd_font = false
 
+-- Floating-window border style ("rounded", "single", "solid", "none").
+-- Override in lua/mars/local.lua and call require("mars.ui.borders").setup().
+vim.g.mars_border_style = "rounded"
+
 local opt = vim.opt
 
 -- Editing
@@ -36,7 +40,6 @@ opt.ruler = false
 opt.pumblend = 10
 opt.pumheight = 12
 opt.pumwidth = 20
-opt.winborder = "rounded"
 opt.winminwidth = 5
 opt.list = true
 opt.listchars = {

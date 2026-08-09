@@ -9,15 +9,19 @@ end
 
 vim.lsp.enable(names)
 
--- Rounded borders and balanced sizing for LSP floating windows.
-local float_defaults = {
-  border = "rounded",
-  max_width = 80,
-  max_height = 16,
-}
-
+-- Balanced sizing for LSP floating windows. Border style is read at
+-- runtime from mars.ui.borders so local.lua overrides take effect.
 vim.lsp.handlers["textDocument/hover"] = function(err, result, ctx, config)
-  vim.lsp.handlers.hover(err, result, ctx, vim.tbl_extend("keep", config or {}, float_defaults))
+  vim.lsp.handlers.hover(
+    err,
+    result,
+    ctx,
+    vim.tbl_extend("keep", config or {}, {
+      border = require("mars.ui.borders").style(),
+      max_width = 80,
+      max_height = 16,
+    })
+  )
 end
 
 vim.lsp.handlers["textDocument/signatureHelp"] = function(err, result, ctx, config)
@@ -26,7 +30,7 @@ vim.lsp.handlers["textDocument/signatureHelp"] = function(err, result, ctx, conf
     result,
     ctx,
     vim.tbl_extend("keep", config or {}, {
-      border = "rounded",
+      border = require("mars.ui.borders").style(),
       max_width = 80,
       max_height = 12,
     })

@@ -10,9 +10,7 @@ require("mars.pack").on({
   event = { "BufReadPre", "BufNewFile" },
   config = function()
     require("gitsigns").setup({
-      -- Rounded border reads better than nvim_open_win's plain default for
-      -- a floating hunk preview.
-      preview_config = { border = "rounded" },
+      preview_config = { border = require("mars.ui.borders").style() },
     })
 
     local hunk_group = { "<leader>gh" }
