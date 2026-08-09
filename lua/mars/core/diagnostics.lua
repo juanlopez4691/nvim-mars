@@ -334,11 +334,27 @@ local M = {}
 
 local QUICKFIX_TYPE_NAMES = { E = "error", W = "warn", I = "info", N = "note" }
 
---- 'quickfixtextfunc' implementation: shortens the file path (relative to
---- cwd when the file is under it, absolute otherwise; the same technique
---- :help quickfix-window-function itself recommends) instead of Neovim's
---- own default, which always shows the full path and crowds out the
---- message entirely on a deeply nested project path.
+--- Shortens an absolute `path` belonging to `bufnr`: if it's inside that
+--- buffer's detected project root (lua/mars/core/rootdir.lua; an attached
+--- LSP client's own root, else the nearest ".git" ancestor, else 'cwd'),
+--- the root portion collapses to "./" so only the path *within* the
+--- project stays visible. Left as the full absolute path otherwise;
+--- claiming a "./" relationship for a path that isn't actually under the
+--- detected root would be misleading, not shortening.
+---@param bufnr integer
+---@param path string absolute path
+---@return string
+local function short_path(bufnr, path)
+  local root = require("mars.core.rootdir").get(bufnr)
+  if path:sub(1, #root + 1) == root .. "/" then
+    return "./" .. path:sub(#root + 2)
+  end
+  return path
+end
+
+--- 'quickfixtextfunc' implementation: shortens the file path (see
+--- short_path above) instead of Neovim's own default, which always shows
+--- the full path and crowds out the message on a deeply nested project.
 ---@param info { quickfix: integer, winid: integer, id: integer, start_idx: integer, end_idx: integer }
 ---@return string[]
 function M.quickfix_text(info)
@@ -348,7 +364,10 @@ function M.quickfix_text(info)
   local lines = {}
   for i = info.start_idx, info.end_idx do
     local item = items[i]
-    local fname = item.bufnr > 0 and vim.fn.fnamemodify(vim.fn.bufname(item.bufnr), ":p:.") or ""
+    local fname = ""
+    if item.bufnr > 0 then
+      fname = short_path(item.bufnr, vim.fn.fnamemodify(vim.fn.bufname(item.bufnr), ":p"))
+    end
     local pos = ("%d col %d"):format(item.lnum, item.col)
     if item.end_col and item.end_col > item.col then
       pos = pos .. "-" .. item.end_col
