@@ -28,33 +28,77 @@ vim.cmd([[
 -- zindex is bumped above the pum's own (50) so the menu's scrollbar, drawn
 -- at the shared edge, can't overwrite the preview's left border.
 
+--- Left-pads the preview buffer's content by one cell, matching the menu's
+--- built-in item inset so docs don't touch the border. The buffer is
+--- core-managed and 'modifiable'-locked, so unlock it briefly. Skips content
+--- whose first line already starts with a space (i.e. already padded; the
+--- buffer is reused across items and rewritten by the C code on each update).
+---@param bufnr integer?
+local function pad_preview_buffer(bufnr)
+  if not (bufnr and vim.api.nvim_buf_is_valid(bufnr)) then
+    return
+  end
+  local first = vim.api.nvim_buf_get_lines(bufnr, 0, 1, false)[1]
+  if not first or first == "" or first:sub(1, 1) == " " then
+    return
+  end
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  for i, line in ipairs(lines) do
+    lines[i] = " " .. line
+  end
+  local modifiable = vim.bo[bufnr].modifiable
+  if not modifiable then
+    vim.bo[bufnr].modifiable = true
+  end
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  if not modifiable then
+    vim.bo[bufnr].modifiable = false
+  end
+end
+
 ---@param winid integer?
 local function border_preview_window(winid)
   if not (winid and vim.api.nvim_win_is_valid(winid)) then
     return
   end
   local cfg = vim.api.nvim_win_get_config(winid)
-  -- "none" means unbordered, not "already styled".
+  local max_width = vim.o.columns - cfg.col - 2
+  -- "none" means unbordered, not "already styled". When freshly bordering,
+  -- widen by one cell to make room for the left padding; when the C code
+  -- later resizes the window (border kept), only clamp.
   if not cfg.border or cfg.border == "none" then
     cfg.border = require("mars.ui.borders").style()
+    cfg.width = math.min(cfg.width + 1, math.max(1, max_width))
+  elseif cfg.width > max_width then
+    -- The C code sizes the borderless window to fit the screen exactly;
+    -- with a border on, that overflows and gets clipped.
+    cfg.width = math.max(1, max_width)
   end
   -- Bump above the pum's own zindex (50) so the menu's scrollbar, drawn at
   -- the shared edge, can't overwrite the preview's left border.
   cfg.zindex = 51
-  -- The C code sizes the borderless window to fit the screen exactly; adding
-  -- a border would overflow and get clipped, so shrink the text area by the
-  -- border's width when needed.
-  local max_width = vim.o.columns - cfg.col - 2
-  if cfg.width > max_width then
-    cfg.width = math.max(1, max_width)
-  end
   vim.api.nvim_win_set_config(winid, cfg)
+
+  -- Wrap at word boundaries and align continuation lines with the padded
+  -- text (breakindent respects the leading pad) instead of the window edge.
+  vim.wo[winid].breakindent = true
+  vim.wo[winid].linebreak = true
+end
+
+--- Styles the pum's documentation preview window: pads its buffer content
+--- and borders the window.
+---@param winid integer?
+---@param bufnr integer?
+local function style_preview_window(winid, bufnr)
+  pad_preview_buffer(bufnr)
+  border_preview_window(winid)
 end
 
 vim.api.nvim_create_autocmd("CompleteChanged", {
   callback = function()
     vim.schedule(function()
-      border_preview_window(vim.fn.complete_info().preview_winid)
+      local info = vim.fn.complete_info()
+      style_preview_window(info.preview_winid, info.preview_bufnr)
     end)
   end,
 })
@@ -65,7 +109,7 @@ if vim.api.nvim__complete_set then
   vim.api.nvim__complete_set = function(...)
     local windata = orig_complete_set(...)
     if type(windata) == "table" then
-      border_preview_window(windata.winid)
+      style_preview_window(windata.winid, windata.bufnr)
     end
     return windata
   end
