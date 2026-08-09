@@ -7,6 +7,10 @@
 
 -- vim.g.have_nerd_font = true
 
+-- Skip Unicode diagnostic symbols in favor of plain ASCII letters, for
+-- terminals/log viewers that don't render Unicode reliably.
+-- vim.g.mars_ascii_diagnostics = true
+
 -- Floating window border style: "rounded" (default) | "single" | "solid" | "none"
 -- vim.g.mars_border_style = "single"
 -- require("mars.ui.borders").setup()
