@@ -532,7 +532,11 @@ vim.api.nvim_create_autocmd("VimEnter", {
   nested = true,
   once = true,
   callback = function()
-    if is_eligible() then
+    -- Read at call time, not memoized above: VimEnter fires after
+    -- lua/mars/local.lua (loaded last, see init.lua) has had a chance to
+    -- set this, same as any other user-tunable global (AGENTS.md's Icons
+    -- section covers why in more detail for vim.g.have_nerd_font).
+    if vim.g.mars_dashboard_enabled ~= false and is_eligible() then
       open()
     end
   end,
