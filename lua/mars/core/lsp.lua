@@ -32,3 +32,18 @@ vim.lsp.handlers["textDocument/signatureHelp"] = function(err, result, ctx, conf
     })
   )
 end
+
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("mars_lsp_rename_keymap", { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_rename, args.buf) then
+      vim.keymap.set(
+        "n",
+        "grn",
+        "<cmd>MarsRename<cr>",
+        { buffer = args.buf, silent = true, desc = "Rename symbol (live preview)" }
+      )
+    end
+  end,
+})
