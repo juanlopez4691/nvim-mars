@@ -52,6 +52,26 @@ vim.api.nvim_create_autocmd("LspAttach", {
   end,
 })
 
+--- Jumps straight to a single LSP location, or sends more than one to the
+--- quickfix list and opens it; the same single-vs-many split the native
+--- `grr`/tagfunc fallback already uses elsewhere in this config.
+---@param locations lsp.Location[]|lsp.LocationLink[]?
+---@param encoding "utf-8"|"utf-16"|"utf-32"
+local function open_locations(locations, encoding)
+  if not locations or #locations == 0 then
+    vim.notify("No locations found", vim.log.levels.INFO)
+    return
+  end
+  local items = vim.lsp.util.locations_to_items(locations, encoding)
+  if #items == 1 then
+    vim.cmd.edit(items[1].filename)
+    vim.api.nvim_win_set_cursor(0, { items[1].lnum, items[1].col - 1 })
+  else
+    vim.fn.setqflist({}, " ", { title = "LSP", items = items })
+    vim.cmd.copen()
+  end
+end
+
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(ev)
     local client = vim.lsp.get_client_by_id(ev.data.client_id)
@@ -59,15 +79,36 @@ vim.api.nvim_create_autocmd("LspAttach", {
       return
     end
 
-    vim.keymap.set(
-      "n",
-      "gD",
-      vim.lsp.buf.type_definition,
-      { buffer = ev.buf, silent = true, desc = "Go to source definition" }
-    )
+    -- `typescript.goToSourceDefinition` resolves through .d.ts declarations
+    -- back to the original source, unlike the generic `type_definition`
+    -- LSP method (which stops at the type's own declaration).
+    vim.keymap.set("n", "gD", function()
+      local win = vim.api.nvim_get_current_win()
+      local params = vim.lsp.util.make_position_params(win, client.offset_encoding)
+      client:exec_cmd({
+        command = "typescript.goToSourceDefinition",
+        arguments = { params.textDocument.uri, params.position },
+      }, { bufnr = ev.buf }, function(err, result)
+        if not err then
+          open_locations(result, client.offset_encoding)
+        end
+      end)
+    end, { buffer = ev.buf, silent = true, desc = "Go to source definition" })
+
+    -- Files that reference/import the *current file*, distinct from (and
+    -- not covered by) the native `grr` mapping, which finds references to
+    -- the symbol under the cursor instead.
     vim.keymap.set("n", "gR", function()
-      vim.lsp.buf.references({ includeDeclaration = false })
+      client:exec_cmd({
+        command = "typescript.findAllFileReferences",
+        arguments = { vim.uri_from_bufnr(ev.buf) },
+      }, { bufnr = ev.buf }, function(err, result)
+        if not err then
+          open_locations(result, client.offset_encoding)
+        end
+      end)
     end, { buffer = ev.buf, silent = true, desc = "File references" })
+
     vim.keymap.set("n", "<leader>cM", function()
       vim.lsp.buf.code_action({
         context = { only = { "source.addMissingImports.ts" } },
