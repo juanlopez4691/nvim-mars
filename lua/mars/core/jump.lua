@@ -201,7 +201,10 @@ function M.jump()
   end
 end
 
+-- `S` isn't bound: it was only ever a redundant alias of `s` here (no
+-- treesitter mode to distinguish them, unlike flash.nvim's real default;
+-- see the module doc), and visual-mode `S` is needed for the conventional
+-- vim-surround/mini.surround "add surround" binding instead.
 vim.keymap.set({ "n", "x", "o" }, "s", M.jump, { desc = "Jump to a 2-char label" })
-vim.keymap.set({ "n", "x", "o" }, "S", M.jump, { desc = "Jump to a 2-char label" })
 
 return M
