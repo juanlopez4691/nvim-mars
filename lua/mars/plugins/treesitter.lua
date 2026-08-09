@@ -59,6 +59,15 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = filetypes,
+  callback = function(ev)
+    if vim.treesitter.query.get(ev.match, "indents") then
+      vim.bo[ev.buf].indentexpr = "v:lua.vim.treesitter.indentexpr()"
+    end
+  end,
+})
+
 -- Folding: default to treesitter, upgrade to LSP folding per-window when the
 -- attaching client supports it.
 vim.o.foldmethod = "expr"
