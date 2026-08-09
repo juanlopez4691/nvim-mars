@@ -144,4 +144,91 @@ vim.api.nvim_create_user_command("MarsRename", function()
   M.rename()
 end, { desc = "Incremental rename with live preview" })
 
+--- Renames `from` on disk, remapping any window showing that buffer to the
+--- new path, then deletes the stale buffer.
+---@param from string absolute path
+---@param to string absolute path
+---@return boolean ok
+local function rename_on_disk(from, to)
+  vim.fn.mkdir(vim.fs.dirname(to), "p")
+  if vim.fn.rename(from, to) ~= 0 then
+    vim.notify(("Failed to rename file: %s"):format(from), vim.log.levels.ERROR)
+    return false
+  end
+
+  local from_buf = vim.fn.bufnr(from)
+  if from_buf >= 0 then
+    local to_buf = vim.fn.bufadd(to)
+    vim.bo[to_buf].buflisted = true
+    for _, win in ipairs(vim.fn.win_findbuf(from_buf)) do
+      vim.api.nvim_win_call(win, function()
+        vim.cmd.buffer(to_buf)
+      end)
+    end
+    vim.api.nvim_buf_delete(from_buf, { force = true })
+  end
+  return true
+end
+
+--- Notifies every attached LSP client of a file rename per the
+--- `workspace/willRenameFiles`/`workspace/didRenameFiles` spec: clients
+--- supporting the "will" request get a chance to return a WorkspaceEdit
+--- (e.g. updating import paths) applied *before* the rename happens, then
+--- the rename itself runs, then clients supporting the "did" method get a
+--- fire-and-forget notification.
+---@param from string absolute path
+---@param to string absolute path
+local function rename_with_lsp(from, to)
+  local changes = { files = { { oldUri = vim.uri_from_fname(from), newUri = vim.uri_from_fname(to) } } }
+  local clients = vim.lsp.get_clients()
+
+  for _, client in ipairs(clients) do
+    if client:supports_method("workspace/willRenameFiles") then
+      local resp = client:request_sync("workspace/willRenameFiles", changes, 1000, 0)
+      if resp and resp.result then
+        vim.lsp.util.apply_workspace_edit(resp.result, client.offset_encoding)
+      end
+    end
+  end
+
+  if not rename_on_disk(from, to) then
+    return
+  end
+
+  for _, client in ipairs(clients) do
+    if client:supports_method("workspace/didRenameFiles") then
+      client:notify("workspace/didRenameFiles", changes)
+    end
+  end
+end
+
+--- Prompts for a new name for `opts.from` (defaulting to the current
+--- buffer's file), then renames it with LSP awareness; the file-rename
+--- counterpart to M.rename()'s symbol rename above.
+---@param opts? { from?: string }
+function M.rename_file(opts)
+  opts = opts or {}
+  local from = vim.fn.fnamemodify(opts.from or vim.api.nvim_buf_get_name(0), ":p")
+  if from == "" then
+    vim.notify("No file to rename", vim.log.levels.WARN)
+    return
+  end
+
+  local dir = vim.fs.dirname(from)
+  local basename = vim.fs.basename(from)
+
+  vim.ui.input({ prompt = "New File Name: ", default = basename, completion = "file" }, function(value)
+    if not value or value == "" or value == basename then
+      return
+    end
+    rename_with_lsp(from, vim.fs.joinpath(dir, value))
+  end)
+end
+
+vim.api.nvim_create_user_command("MarsRenameFile", function()
+  M.rename_file()
+end, { desc = "Rename the current file with LSP awareness" })
+
+vim.keymap.set("n", "<leader>cR", "<cmd>MarsRenameFile<cr>", { silent = true, desc = "Code: rename current file" })
+
 return M
