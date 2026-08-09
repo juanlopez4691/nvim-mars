@@ -8,3 +8,27 @@ for _, file in ipairs(vim.api.nvim_get_runtime_file("lsp/*.lua", true)) do
 end
 
 vim.lsp.enable(names)
+
+-- Rounded borders and balanced sizing for LSP floating windows.
+local float_defaults = {
+  border = "rounded",
+  max_width = 80,
+  max_height = 16,
+}
+
+vim.lsp.handlers["textDocument/hover"] = function(err, result, ctx, config)
+  vim.lsp.handlers.hover(err, result, ctx, vim.tbl_extend("keep", config or {}, float_defaults))
+end
+
+vim.lsp.handlers["textDocument/signatureHelp"] = function(err, result, ctx, config)
+  vim.lsp.handlers.signature_help(
+    err,
+    result,
+    ctx,
+    vim.tbl_extend("keep", config or {}, {
+      border = "rounded",
+      max_width = 80,
+      max_height = 12,
+    })
+  )
+end
