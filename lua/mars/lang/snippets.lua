@@ -88,7 +88,8 @@ local function delete_word_before_cursor(len)
 end
 
 --- <Tab> handler: jump an active snippet, else expand a matching trigger
---- word, else fall through to a literal <Tab>.
+--- word, else navigate the completion popup, else fall through to a literal
+--- <Tab>.
 function M.tab()
   if vim.snippet.active({ direction = 1 }) then
     vim.snippet.jump(1)
@@ -100,6 +101,10 @@ function M.tab()
   if body then
     delete_word_before_cursor(#word)
     vim.snippet.expand(body)
+    return
+  end
+
+  if require("mars.core.completion").pum_tab() then
     return
   end
 
