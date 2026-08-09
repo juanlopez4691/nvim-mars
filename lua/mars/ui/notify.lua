@@ -8,6 +8,9 @@
 -- Keep this list short and add to it by exact substring, not a regex.
 local suppressed_patterns = {
   "No information available",
+  -- blade-nav.nvim trying to register an nvim-cmp completion source: benign,
+  -- expected, and permanent; Mars has no nvim-cmp (native completion only).
+  "BladeNav Warn",
 }
 
 local levels = vim.log.levels
@@ -292,13 +295,17 @@ local function notify(msg, level, opts)
   msg = tostring(msg)
 
   vim.schedule(function()
-    -- Always record to :messages first, filtered or not, so nothing sent
-    -- through this function is ever silently lost.
-    pcall(default_notify, msg, level, opts)
-
     if is_suppressed(msg) then
+      -- Fully dropped, not just hidden from the floating UI: the real
+      -- vim.notify still echoes WARN/ERROR-level messages to the cmdline
+      -- area even when only :messages-logging was wanted, so a suppressed
+      -- pattern has to skip default_notify too, not just the float.
       return
     end
+
+    -- Record to :messages so nothing sent through this function (other
+    -- than an explicitly suppressed pattern above) is ever silently lost.
+    pcall(default_notify, msg, level, opts)
 
     local ok, err = pcall(render, msg, level)
     if not ok then
