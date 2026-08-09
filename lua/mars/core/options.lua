@@ -32,7 +32,11 @@ opt.grepformat = "%f:%l:%c:%m"
 
 -- UI
 opt.number = true -- relativenumber is toggled dynamically based on mode/window focus
-opt.signcolumn = "yes"
+-- Two fixed columns, not one: with a single column, a gitsigns hunk marker
+-- and a diagnostic sign on the same line compete for the one slot and only
+-- the higher-priority one renders; widening avoids that silently hiding
+-- whichever loses.
+opt.signcolumn = "yes:2"
 opt.termguicolors = true
 opt.laststatus = 3
 opt.showmode = false
