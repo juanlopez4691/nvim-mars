@@ -241,8 +241,14 @@ local function format_action(action)
 end
 
 --- Builds the (unpadded) content lines plus per-line highlight ranges.
+--- `header_count` marks where the header group (ASCII art + blank +
+--- greeting) ends and the menu group begins -- the two are centered as
+--- independent blocks (see render()), since the wide ASCII art and the
+--- much narrower menu text would otherwise force the menu to share the
+--- art's left margin instead of genuinely centering on its own.
 ---@return string[] lines
 ---@return {line: integer, col_start: integer, col_end: integer, hl: string}[] highlights
+---@return integer header_count
 local function build_content()
   local lines = {}
   local highlights = {}
@@ -264,6 +270,9 @@ local function build_content()
   table.insert(lines, "")
   table.insert(lines, greeting())
   add("Comment")
+
+  local header_count = #lines
+
   table.insert(lines, "")
   table.insert(lines, "")
 
@@ -289,7 +298,7 @@ local function build_content()
   -- Drop the trailing blank line added by the last group.
   lines[#lines] = nil
 
-  return lines, highlights
+  return lines, highlights, header_count
 end
 
 ---@param lines string[]
@@ -300,12 +309,6 @@ local function block_width(lines)
     width = math.max(width, vim.fn.strdisplaywidth(line))
   end
   return width
-end
-
----@param line string
----@return boolean
-local function is_menu_line(line)
-  return line:match("^%[") ~= nil or line == "Maintenance"
 end
 
 --- The window's current {width, height}, or nil if the dashboard isn't
@@ -325,9 +328,16 @@ local function current_size()
 end
 
 --- Renders (or re-renders, e.g. after a resize) the dashboard into its
---- buffer, centered in whichever window currently shows it. Header and
---- greeting are centered within the menu block; menu entries stay
---- left-aligned within it, matching how the shared left margin is applied.
+--- buffer, centered in whichever window currently shows it. The header
+--- (ASCII art) and the menu are centered as two independent blocks, each
+--- on the *window's* width, not on each other -- the art is much wider
+--- than the menu text, so sharing one block width would either force the
+--- menu to hug the art's left edge instead of genuinely centering, or
+--- (the other way around) misalign the art's own rows, which need one
+--- rigid shared left margin, not a per-row center. The greeting is the one
+--- line centered *within* the header block instead of using its flat
+--- margin, since a short line of text under a wide logo reads better
+--- centered under it than flush against its left edge.
 local function render()
   if not dashboard_buf or not vim.api.nvim_buf_is_valid(dashboard_buf) then
     return
@@ -337,27 +347,38 @@ local function render()
     return
   end
 
-  local lines, highlights = build_content()
-  local width = block_width(lines)
+  local lines, highlights, header_count = build_content()
   local win_width = vim.api.nvim_win_get_width(win)
   local win_height = vim.api.nvim_win_get_height(win)
-  local left_margin = math.max(0, math.floor((win_width - width) / 2))
   local top_margin = math.max(0, math.floor((win_height - #lines) / 2))
 
+  local header_lines = { unpack(lines, 1, header_count) }
+  local menu_lines = { unpack(lines, header_count + 1, #lines) }
+  local header_width = block_width(header_lines)
+  local menu_width = block_width(menu_lines)
+  local header_margin = math.max(0, math.floor((win_width - header_width) / 2))
+  local menu_margin = math.max(0, math.floor((win_width - menu_width) / 2))
+
+  local greeting_line = header_count -- the last line of the header group
+
+  ---@param i integer 1-indexed position in `lines`
   ---@param line string
-  local function line_pad(line)
-    if is_menu_line(line) then
-      return left_margin
+  local function line_pad(i, line)
+    if i > header_count then
+      return menu_margin
     end
-    return left_margin + math.max(0, math.floor((width - vim.fn.strdisplaywidth(line)) / 2))
+    if i == greeting_line then
+      return header_margin + math.max(0, math.floor((header_width - vim.fn.strdisplaywidth(line)) / 2))
+    end
+    return header_margin
   end
 
   local padded = {}
   for _ = 1, top_margin do
     table.insert(padded, "")
   end
-  for _, line in ipairs(lines) do
-    table.insert(padded, (" "):rep(line_pad(line)) .. line)
+  for i, line in ipairs(lines) do
+    table.insert(padded, (" "):rep(line_pad(i, line)) .. line)
   end
 
   vim.bo[dashboard_buf].modifiable = true
@@ -366,8 +387,9 @@ local function render()
 
   vim.api.nvim_buf_clear_namespace(dashboard_buf, ns, 0, -1)
   for _, hl in ipairs(highlights) do
-    local text = lines[hl.line + 1]
-    local pad = line_pad(text)
+    local i = hl.line + 1
+    local text = lines[i]
+    local pad = line_pad(i, text)
     local col_start = pad + hl.col_start
     -- -1 means "to end of line"; nvim_buf_set_extmark wants a real byte
     -- offset for end_col, so resolve it against the (unpadded) text length.
