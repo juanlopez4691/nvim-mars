@@ -69,7 +69,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 vim.api.nvim_set_hl(0, "MarsDashboardHeader", { fg = "#c1440e", bold = true })
 
---- Time-of-day greeting.
+--- Time-of-day greeting, addressed to the logged-in user.
 ---@return string
 local function greeting()
   local hour = tonumber(vim.fn.strftime("%H")) or 12
@@ -83,7 +83,8 @@ local function greeting()
   else
     part = "evening"
   end
-  return ("Good %s"):format(part)
+  local username = os.getenv("USER") or os.getenv("USERNAME") or "there"
+  return ("Good %s, %s"):format(part, username)
 end
 
 --- Whether a plugin has been registered with `vim.pack` (via
