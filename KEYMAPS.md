@@ -44,12 +44,13 @@ Source: [`lua/mars/core/diagnostics.lua`](lua/mars/core/diagnostics.lua),
 
 ## Debug (`<leader>d`)
 
-Source: [`lua/mars/core/dap.lua`](lua/mars/core/dap.lua). Every action is bound
-to both a `<leader>d*` mnemonic and one or more F-key forms, mirroring
-xterm/tmux's convention of sending Shift/Ctrl-Fn as an extended F-number
-(e.g. Shift-F5 arrives as `<F17>`) rather than `<S-F5>` directly; both forms
-are bound so whichever a given terminal reports still fires. All calls are
-pcall-guarded against nvim-dap/nvim-dap-ui not being loaded yet.
+Source: [`lua/mars/core/dap.lua`](lua/mars/core/dap.lua). Every action is
+bound to a `<leader>d*` mnemonic, and the core stepping/breakpoint set is
+also bound to one or more F-key forms, mirroring xterm/tmux's convention of
+sending Shift/Ctrl-Fn as an extended F-number (e.g. Shift-F5 arrives as
+`<F17>`) rather than `<S-F5>` directly: both forms are bound so whichever a
+given terminal reports still fires. All calls are pcall-guarded against
+nvim-dap/nvim-dap-ui not being loaded yet.
 
 | Key(s)                          | Mode | Action                              |
 | ---------------------------------- | ---- | -------------------------------------- |
@@ -66,6 +67,11 @@ pcall-guarded against nvim-dap/nvim-dap-ui not being loaded yet.
 | `<leader>dP`, `<F7>`               | n    | Pause                                |
 | `<leader>dt`, `<F8>`               | n    | Terminate: closes dap-ui, then terminates the DAP session |
 | `<leader>de`, `<F12>`              | n    | dap-ui: evaluate expression under cursor |
+| `<leader>da`                       | n    | Continue, after prompting for launch arguments |
+| `<leader>dr`                       | n    | Toggle the REPL window               |
+| `<leader>ds`                       | n    | Session (nvim-dap's `dap.session()`) |
+| `<leader>du`                       | n    | dap-ui: manual toggle (separate from the automatic show/hide on session start/end) |
+| `<leader>dw`                       | n    | Widget hover: debug info for the expression under the cursor |
 
 ## Find (`<leader>f`)
 

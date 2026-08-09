@@ -2,6 +2,9 @@
 -- once one is running (see lua/mars/plugins/dap.lua, NEO-44, for the stack
 -- itself: nvim-dap/nvim-dap-ui/nvim-dap-virtual-text/mason-nvim-dap,
 -- lazy-loaded on VimEnter).
+-- The mnemonic-only extras (run with args, REPL, session, manual dap-ui
+-- toggle, widget hover) have no F-key equivalent; each action is bound to a
+-- `<leader>d*` mnemonic and one or more F-key forms.
 -- `<leader>d` is already reserved as the "Debug" which-key group in
 -- lua/mars/plugins/which-key.lua.
 --
@@ -69,6 +72,64 @@ local function terminate()
   safe_dap_call("terminate")()
 end
 
+--- Builds the `before` hook `dap.continue()` runs before launching,
+--- prompting for launch arguments (pre-filled with whatever the active
+--- configuration already has). A `get_args`-style hook, minus the
+--- java-specific string-args branch: mars has no java debug adapter
+--- configured, so `dap.utils.splitstr`'s table return is always correct
+--- here.
+---@param config table
+---@return table
+local function get_args(config)
+  local args = type(config.args) == "function" and (config.args() or {}) or config.args or {}
+  local args_str = type(args) == "table" and table.concat(args, " ") or args
+
+  config = vim.deepcopy(config)
+  config.args = function()
+    local new_args = vim.fn.expand(vim.fn.input("Run with args: ", args_str))
+    return require("dap.utils").splitstr(new_args)
+  end
+  return config
+end
+
+--- Continues (or starts) the debug session after prompting for launch
+--- arguments via `get_args`. Pcall-guarded the same way as `safe_dap_call`.
+---@return nil
+local function run_with_args()
+  local ok, dap = pcall(require, "dap")
+  if not ok then
+    vim.notify("nvim-dap is not available", vim.log.levels.WARN)
+    return
+  end
+  dap.continue({ before = get_args })
+end
+
+--- Toggles nvim-dap's REPL window. Pcall-guarded the same way as
+--- `safe_dap_call`, but reaches into `dap.repl` since `repl.toggle` isn't a
+--- top-level `dap.*` function.
+---@return nil
+local function toggle_repl()
+  local ok, dap = pcall(require, "dap")
+  if not ok then
+    vim.notify("nvim-dap is not available", vim.log.levels.WARN)
+    return
+  end
+  dap.repl.toggle()
+end
+
+--- Shows a hover widget with debug info (scopes/variables) for the
+--- expression under the cursor, via nvim-dap's built-in widgets module.
+--- Pcall-guarded the same way as `safe_dap_call`.
+---@return nil
+local function widget_hover()
+  local ok, widgets = pcall(require, "dap.ui.widgets")
+  if not ok then
+    vim.notify("nvim-dap is not available", vim.log.levels.WARN)
+    return
+  end
+  widgets.hover()
+end
+
 --- Binds normal-mode `rhs` to every lhs in `lhs_list` with the same
 --- description, used below so one action reachable via its `<leader>d*`
 --- mnemonic and one or more F-key forms (plain, extended-numeric, and/or
@@ -96,3 +157,8 @@ bind({ "<leader>dl", "<F29>", "<C-F5>" }, safe_dap_call("run_last"), "Debug: run
 bind({ "<leader>dP", "<F7>" }, safe_dap_call("pause"), "Debug: pause")
 bind({ "<leader>dt", "<F8>" }, terminate, "Debug: terminate")
 bind({ "<leader>de", "<F12>" }, safe_dapui_call("eval"), "Debug: eval under cursor")
+bind({ "<leader>da" }, run_with_args, "Debug: run with args")
+bind({ "<leader>dr" }, toggle_repl, "Debug: toggle REPL")
+bind({ "<leader>ds" }, safe_dap_call("session"), "Debug: session")
+bind({ "<leader>du" }, safe_dapui_call("toggle"), "Debug: toggle dap-ui")
+bind({ "<leader>dw" }, widget_hover, "Debug: widget hover")
