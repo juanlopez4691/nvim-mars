@@ -59,6 +59,10 @@ opt.sidescrolloff = 8
 opt.smoothscroll = true
 opt.mouse = "a"
 opt.confirm = true
+-- Global fallback border for any float that doesn't set its own (e.g. LSP
+-- hover/signature-help, vim.ui.select); see vim.lsp.util.open_floating_preview,
+-- which falls back to this option when no explicit border is passed.
+opt.winborder = "rounded"
 
 -- Splits
 opt.splitbelow = true
