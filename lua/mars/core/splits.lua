@@ -111,6 +111,33 @@ local function resize(direction)
   end
 end
 
+--- Re-equalizes splits after the terminal window changes size. Neovim
+--- rescales windows proportionally on resize, which drifts: repeated
+--- resizes accumulate rounding leftovers and a split that was half the
+--- screen ends up visibly off. Every tabpage is equalized, not just the
+--- current one, since background tabs are laid out at the old size and
+--- would otherwise stay skewed until they're entered.
+---
+--- `nvim_win_call` on each tabpage's current window scopes `wincmd =` to
+--- that tabpage without the `tabdo` side effects (WinEnter/BufEnter
+--- autocmds firing everywhere, the alternate tab being clobbered), and
+--- leaves the current window untouched. Windows with 'winfixwidth' or
+--- 'winfixheight', the netrw sidebar (see lua/mars/core/netrw.lua) and
+--- nvim-dap-ui's panes, keep their size, as `wincmd =` honours both.
+local function equalize()
+  for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+    vim.api.nvim_win_call(vim.api.nvim_tabpage_get_win(tab), function()
+      vim.cmd("wincmd =")
+    end)
+  end
+end
+
+vim.api.nvim_create_autocmd("VimResized", {
+  group = vim.api.nvim_create_augroup("mars_splits", { clear = true }),
+  desc = "Re-equalize splits when the terminal is resized",
+  callback = equalize,
+})
+
 vim.keymap.set("n", "<C-h>", function()
   move("h")
 end, { silent = true, desc = "Window: focus left, wrapping" })
