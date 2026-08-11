@@ -67,11 +67,16 @@ local group = vim.api.nvim_create_augroup("mars_netrw", { clear = true })
 vim.api.nvim_create_autocmd("FileType", {
   group = group,
   pattern = "netrw",
-  desc = "Trim window chrome the tree sidebar doesn't need",
+  desc = "Trim window chrome the tree sidebar doesn't need and pin its width",
   callback = function()
     vim.wo.number = false
     vim.wo.relativenumber = false
     vim.wo.signcolumn = "no"
     vim.wo.list = false
+    -- The sidebar is a deliberate fixed 30 columns (netrw_winsize above),
+    -- so exempt it from window equalization, both the manual `<C-w>=` and
+    -- the automatic one on terminal resize (lua/mars/core/splits.lua),
+    -- which would otherwise stretch it to an even share of the screen.
+    vim.wo.winfixwidth = true
   end,
 })
