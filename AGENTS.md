@@ -249,6 +249,11 @@ Two separate things are both called "linting" here: keep them distinct:
     boot smoke test on every push/PR.
   - Interactively: `:source %` or restart; confirm no errors in `:messages`
     and `:checkhealth mars`.
+- Before committing, review your own diff and leave it clean: no LSP
+  diagnostics on the files you touched, no deprecated APIs, no formatting or
+  lint findings, and no code that a second pass would delete as redundant.
+  Fold the fixes into the commit they belong to. See `/commit` for the
+  checklist and `/lint` for how to read diagnostics reliably.
 
 ## Code Structure and Imports
 
