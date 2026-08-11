@@ -321,6 +321,11 @@ Two separate things are both called "linting" here: keep them distinct:
   `vim.log.levels`.
 - Use `vim.schedule` for notifications from callbacks or async contexts.
 - Prefer Neovim diagnostics and `vim.notify` over printing to stdout/stderr.
+- Do not validate user-set `vim.g.mars_*` globals. An unrecognized value
+  falls back to the documented default silently: no warning, no
+  allowed-values check. The only reader of `lua/mars/local.lua` is the
+  person who wrote it, and a setting that visibly does nothing is its own
+  error message.
 
 ## Plugin and Config Patterns
 
