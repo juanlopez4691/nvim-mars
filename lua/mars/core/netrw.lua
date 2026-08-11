@@ -24,10 +24,24 @@ local function explorer_win()
   return nil
 end
 
+--- Whether the sidebar belongs on the right, per `vim.g.mars_explorer_position`
+--- ("left" by default, "right" to flip it). Netrw spells that as :Lexplore's
+--- bang, which also points |g:netrw_chgwin| at window 1 so opened files
+--- still land in the main window rather than beside the tree.
+---
+--- Read on each open, never memoized: lua/mars/local.lua (where the global
+--- is actually set) loads after this module, so an upvalue captured here
+--- would freeze to the default (see AGENTS.md's Icons section for the same
+--- rule).
+---@return boolean
+local function on_right()
+  return vim.g.mars_explorer_position == "right"
+end
+
 --- Toggles the sidebar: closes it if a netrw window is already open,
---- otherwise opens one as a left-hand vertical split. Always looks the
---- window up by filetype rather than assuming a window number, so this
---- stays correct no matter what other splits are open, and repeated
+--- otherwise opens one as a vertical split on the configured side. Always
+--- looks the window up by filetype rather than assuming a window number, so
+--- this stays correct no matter what other splits are open, and repeated
 --- toggles never stack a second netrw window.
 local function toggle_explorer()
   local win = explorer_win()
@@ -35,7 +49,7 @@ local function toggle_explorer()
     vim.api.nvim_win_close(win, false)
     return
   end
-  vim.cmd.Lexplore()
+  vim.cmd.Lexplore({ bang = on_right() })
 end
 
 --- Opens the sidebar rooted at the current buffer's directory. Reuses an
@@ -44,7 +58,12 @@ end
 local function explore_current_file()
   local dir = vim.fn.expand("%:p:h")
   if dir == "" then
-    dir = vim.uv.cwd()
+    -- getcwd() rather than vim.uv.cwd(): it can't fail (so `dir` stays a
+    -- plain string all the way to fnameescape), and it honours a window- or
+    -- tab-local :lcd, which is the directory the user is actually working
+    -- in. Matches how the rest of Mars falls back: see lua/mars/lang/
+    -- format.lua and lua/mars/core/rootdir.lua.
+    dir = vim.fn.getcwd()
   end
 
   local win = explorer_win()
@@ -53,7 +72,7 @@ local function explore_current_file()
     vim.cmd.Explore(vim.fn.fnameescape(dir))
     return
   end
-  vim.cmd.Lexplore(vim.fn.fnameescape(dir))
+  vim.cmd.Lexplore({ args = { vim.fn.fnameescape(dir) }, bang = on_right() })
 end
 
 vim.keymap.set("n", "<leader>e", toggle_explorer, { desc = "Explorer: toggle sidebar" })

@@ -18,6 +18,9 @@
 -- Disable the start screen shown on a bare `nvim` invocation.
 -- vim.g.mars_dashboard_enabled = false
 
+-- Side the file explorer sidebar opens on: "left" (default) | "right"
+-- vim.g.mars_explorer_position = "right"
+
 -- vim.o.scrolloff = 8
 
 -- vim.keymap.set("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit all" })
