@@ -21,13 +21,24 @@ local UI_BUFTYPES = {
 }
 
 --- Whether the current window is a plain, editable buffer worth managing:
---- not one of `UI_BUFTYPES`, and not a floating/popup window (relative ~=
---- ""). Floats never get numbers/cursorline regardless of what they hold,
---- since they're popups (hover docs, previews, ...) rather than editing
---- surfaces.
+--- not one of `UI_BUFTYPES`, not netrw, and not a floating/popup window
+--- (relative ~= ""). Floats never get numbers/cursorline regardless of what
+--- they hold, since they're popups (hover docs, previews, ...) rather than
+--- editing surfaces.
 ---@return boolean
 local function is_normal_window()
   if UI_BUFTYPES[vim.bo.buftype] then
+    return false
+  end
+
+  -- Netrw is the one UI the buftype check can't catch: its listing buffers
+  -- keep 'buftype' empty, so without this the WinLeave handler numbers the
+  -- explorer sidebar the moment it loses focus, undoing the chrome netrw's
+  -- own FileType handler strips (see lua/mars/core/netrw.lua). It's checked
+  -- by filetype rather than folded into UI_BUFTYPES precisely because it's
+  -- an exception to that heuristic, not another case of it. Netrw also
+  -- drives its own cursorline via g:netrw_cursor.
+  if vim.bo.filetype == "netrw" then
     return false
   end
 
