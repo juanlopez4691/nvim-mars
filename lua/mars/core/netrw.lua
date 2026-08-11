@@ -59,6 +59,97 @@ end
 vim.keymap.set("n", "<leader>e", toggle_explorer, { desc = "Explorer: toggle sidebar" })
 vim.keymap.set("n", "<leader>E", explore_current_file, { desc = "Explorer: open at current file" })
 
+--- Nesting depth of a tree-listing line: netrw prefixes each level with
+--- "| " under `netrw_liststyle = 3` (`| | mars/` is two levels deep).
+---@param line string
+---@return integer
+local function tree_depth(line)
+  local indent = line:match("^[| ]*")
+  return #indent / 2
+end
+
+--- Whether the cursor sits on an unfolded directory, the one state where
+--- netrw's <CR> folds rather than opens, so both keymaps below branch on
+--- it. Netrw does track its expanded set in `w:netrw_treedict`, but keyed
+--- by absolute path, which would mean rebuilding the current line's path
+--- from its ancestors; the listing already encodes the answer, since a
+--- directory's children are the lines directly below it, one level deeper.
+---
+--- A file never has children, so deeper lines below imply a directory and
+--- this doubles as the "is this a directory" test. Keeping it off netrw's
+--- trailing-slash convention also sidesteps the `ls -F` decorations that
+--- convention doesn't survive (`name@ --> target` for symlinks, `name*`
+--- for executables).
+---
+--- Reads false in the flat list styles (no "| " prefixes, so nothing is
+--- ever deeper), which is what makes `l` fall through to plain "enter this
+--- directory" there.
+---@return boolean
+local function on_unfolded_dir()
+  local lnum = vim.fn.line(".")
+  local next_line = vim.fn.getline(lnum + 1)
+
+  return next_line ~= "" and tree_depth(next_line) > tree_depth(vim.fn.getline(lnum))
+end
+
+--- Triggers netrw's own <CR> handler on the current line; open a file, or
+--- toggle a directory's fold. Fed remappably (mode "m") rather than calling
+--- a netrw function directly, so whatever netrw bound <CR> to for this
+--- listing runs, local or remote.
+local function activate()
+  vim.api.nvim_feedkeys(vim.keycode("<CR>"), "m", false)
+end
+
+--- `l`: unfolds the directory under the cursor, or opens the file under
+--- it. No-op on an already-unfolded directory; <CR> toggles, so passing
+--- it through there would fold what the user asked to open.
+local function unfold_or_open()
+  if not on_unfolded_dir() then
+    activate()
+  end
+end
+
+--- Line number of the foldable directory containing the current line: the
+--- nearest line above it at a shallower indent level. Nil at the top
+--- level, where there's nothing left to fold into.
+---@return integer?
+local function parent_line()
+  local lnum = vim.fn.line(".")
+  local depth = tree_depth(vim.fn.getline(lnum))
+
+  for n = lnum - 1, 1, -1 do
+    local parent_depth = tree_depth(vim.fn.getline(n))
+    if parent_depth < depth then
+      -- Depth 0 is the tree root, which has no folded state to reach:
+      -- netrw always lists its children, so <CR> there merely re-lists the
+      -- tree and drops the cursor back on "../".
+      return parent_depth > 0 and n or nil
+    end
+  end
+  return nil
+end
+
+--- `h`: folds the directory under the cursor, or on a file or an
+--- already-folded directory, where there's nothing to fold in place,
+--- folds the directory that contains it, leaving the cursor on that
+--- directory so repeated presses walk back up the tree. That parent is
+--- necessarily unfolded, since the line the cursor started on is one of
+--- the children it's showing.
+local function fold()
+  if on_unfolded_dir() then
+    activate()
+    return
+  end
+
+  local parent = parent_line()
+  if not parent then
+    return
+  end
+
+  vim.api.nvim_win_set_cursor(0, { parent, 0 })
+  activate()
+end
+
 -- The tree reads fine without file-type glyphs, so there's no icon table to
 -- gate behind vim.g.have_nerd_font here (see AGENTS.md's Icons section);
 -- this only trims window chrome the sidebar doesn't need.
@@ -89,5 +180,13 @@ vim.api.nvim_create_autocmd("FileType", {
     for _, key in ipairs({ "<C-h>", "<C-j>", "<C-k>", "<C-l>" }) do
       pcall(vim.keymap.del, "n", key, { buffer = args.buf })
     end
+
+    -- Tree navigation on h/l, alongside netrw's own <CR> (which keeps
+    -- doing all three, since it toggles).
+    vim.keymap.set("n", "l", unfold_or_open, {
+      buffer = args.buf,
+      desc = "Explorer: unfold directory or open file",
+    })
+    vim.keymap.set("n", "h", fold, { buffer = args.buf, desc = "Explorer: fold directory" })
   end,
 })
