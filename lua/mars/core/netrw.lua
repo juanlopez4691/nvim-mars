@@ -65,7 +65,7 @@ vim.keymap.set("n", "<leader>E", explore_current_file, { desc = "Explorer: open 
 ---@return integer
 local function tree_depth(line)
   local indent = line:match("^[| ]*")
-  return #indent / 2
+  return math.floor(#indent / 2)
 end
 
 --- Whether the cursor sits on an unfolded directory, the one state where
@@ -129,6 +129,78 @@ local function parent_line()
   return nil
 end
 
+--- Namespace for the tree-line overlay (see draw_tree_lines).
+local tree_ns = vim.api.nvim_create_namespace("mars_netrw_tree")
+
+--- Overlay pieces for one indent level. Each is exactly two cells wide, so
+--- it covers netrw's own two-character "| " unit and nothing else; the
+--- entry names keep their columns. Plain box-drawing characters rather
+--- than Nerd Font glyphs, so this needs no `vim.g.have_nerd_font` gate
+--- (see AGENTS.md's Icons section).
+local BAR = "│ " -- an ancestor directory continues past this line
+local GAP = "  " -- ... and doesn't
+local BRANCH = "├─" -- an entry with more entries below it
+local LAST_BRANCH = "└─" -- the last entry of its directory
+
+--- Redraws `buf`'s tree lines. Netrw indents each level with "| ", which
+--- reads as a column of disconnected pipes; this overlays every indent
+--- unit with box-drawing characters that actually join up: bars running
+--- through the directories that continue below, a corner on each
+--- directory's last entry.
+---
+--- Drawn as extmarks rather than by rewriting the lines because netrw
+--- parses those "| " prefixes back into real paths when an entry is opened
+--- (s:NetrwTreePath in its source), so the text itself has to stay put.
+---@param buf integer
+local function draw_tree_lines(buf)
+  if not vim.api.nvim_buf_is_valid(buf) then
+    return
+  end
+
+  vim.api.nvim_buf_clear_namespace(buf, tree_ns, 0, -1)
+
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  -- Whether the directory opened at each level still has entries below the
+  -- line being drawn, and so needs its bar carried through it. Walking the
+  -- listing bottom-up is what makes that answerable in one pass: a level
+  -- is "continuing" exactly while entries at that depth are still behind
+  -- us, and any shallower line ends every level below it.
+  local continues = {}
+  local deepest = 0
+
+  for lnum = #lines, 1, -1 do
+    local line = lines[lnum]
+    local depth = tree_depth(line)
+
+    if depth > 0 then
+      local pieces = {}
+      for level = 1, depth - 1 do
+        pieces[level] = continues[level] and BAR or GAP
+      end
+
+      if line:match("^[| ]*$") then
+        -- Netrw pads an unfolded but empty directory with an indent-only
+        -- line; branching into a name that isn't there looks like a bug.
+        pieces[depth] = GAP
+      else
+        pieces[depth] = continues[depth] and BRANCH or LAST_BRANCH
+      end
+
+      vim.api.nvim_buf_set_extmark(buf, tree_ns, lnum - 1, 0, {
+        virt_text = { { table.concat(pieces), "netrwTreeBar" } },
+        virt_text_pos = "overlay",
+        hl_mode = "combine",
+      })
+    end
+
+    continues[depth] = true
+    for level = depth + 1, deepest do
+      continues[level] = false
+    end
+    deepest = math.max(deepest, depth)
+  end
+end
+
 --- `h`: folds the directory under the cursor, or on a file or an
 --- already-folded directory, where there's nothing to fold in place,
 --- folds the directory that contains it, leaving the cursor on that
@@ -188,5 +260,32 @@ vim.api.nvim_create_autocmd("FileType", {
       desc = "Explorer: unfold directory or open file",
     })
     vim.keymap.set("n", "h", fold, { buffer = args.buf, desc = "Explorer: fold directory" })
+
+    -- Netrw rewrites the whole listing on every fold, unfold and refresh,
+    -- so the overlay follows the buffer's own changes rather than the
+    -- events behind them; netrw's <CR> and its refresh never pass through
+    -- this module. Scheduled because on_lines runs in a context where
+    -- extmark calls aren't allowed, and coalesced because netrw rewrites a
+    -- listing line by line. FileType fires more than once per netrw
+    -- buffer, so the attach guard.
+    if not vim.b[args.buf].mars_netrw_tree then
+      vim.b[args.buf].mars_netrw_tree = true
+
+      local queued = false
+      vim.api.nvim_buf_attach(args.buf, false, {
+        on_lines = function(_, buf)
+          if queued then
+            return
+          end
+          queued = true
+          vim.schedule(function()
+            queued = false
+            draw_tree_lines(buf)
+          end)
+        end,
+      })
+    end
+
+    draw_tree_lines(args.buf)
   end,
 })
