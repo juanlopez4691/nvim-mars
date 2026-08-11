@@ -29,3 +29,25 @@ Selene and LSP. It does NOT cover formatting (see `/format`) or code changes
 
 Run `:checkhealth mars` and `:checkhealth` to verify LSP/linter status.
 Check `:messages` after reloading for diagnostic errors.
+
+## Reading Lua Diagnostics From The Terminal
+
+`lua-language-server --check <file>` is **not** a substitute for the warnings
+shown in the editor: it reads `.luarc.json` but not the Neovim runtime
+library, which `lsp/lua_ls.lua` injects from its `on_init` hook. Without
+those meta definitions `vim.fn.*` and `vim.uv.*` resolve to `unknown`, so
+the real findings: `string?` from `vim.uv.cwd()`, `string|string[]` from
+`vim.fn.getline()`: are silently absent, and it reports success on a file
+that has warnings.
+
+Drive the actual client instead: a script that opens each file, waits for
+`vim.lsp.get_clients({ bufnr = buf })` to be non-empty, waits again for the
+server to publish, then prints `vim.diagnostic.get(buf)`.
+
+```bash
+NVIM_APPNAME=nvim-mars nvim --headless \
+  -u ~/.config/nvim-mars/init.lua -l diag.lua
+```
+
+`NVIM_APPNAME=nvim-mars` is mandatory: without it the run loads
+`~/.config/nvim` and proves nothing about this config.
