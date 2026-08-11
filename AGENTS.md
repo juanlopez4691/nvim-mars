@@ -126,13 +126,16 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - Commit subjects should explain WHY the change is made: what problem it
   solves or what feature it adds. Do NOT explain WHAT or HOW; the code
   already does that.
-- No scope or context suffix (e.g., no `(fixes #123)` or issue references)
-  appended to the subject.
+- `(ai)` is the only scope, and it is required for changes to the files that
+  exist to steer AI agents: `AGENTS.md`, `CLAUDE.md`, `.agents/skills/**`,
+  `.claude/**`. Every other commit is scopeless. Never append a context
+  suffix (e.g. `(fixes #123)` or issue references) to the subject.
 - No commit body unless absolutely necessary to explain the "why." Prefer a
   self-contained subject that makes the body redundant.
 - One logical change per commit. Never mix unrelated topics. A commit
   subject that reads "do X and Y" must be split into (at least) two commits.
-- Changes to `.md` files (README, AGENTS.md, skills) must use `docs:` type.
+- Changes to `.md` files (README, AGENTS.md, skills) must use `docs:` type;
+  `docs(ai):` when the file is agent-facing, per the scope rule above.
 - Use `fix:` when correcting something already broken or behaving
   incorrectly. Use `feat:` when adding protection, robustness, or new
   behaviour: including proactively preventing a class of error. Verbs like
@@ -160,6 +163,10 @@ codes into the stored commit message. No `Co-Authored-By` trailers.
   → Two unrelated files; split into two commits.
 - ✅ `docs: fix markdownlint errors in README`
   → Single topic, self-contained.
+- ❌ `docs: require a self-review pass before committing`
+  → The change edits AGENTS.md and a skill, so the `(ai)` scope is required.
+- ✅ `docs(ai): require a self-review pass before committing`
+  → Same subject, correctly scoped.
 - ❌ `feat: add lsp config and completion setup`
   → "and" signals two changes; must be split.
 - ❌ `fix: pass cwd to vim.fs.root so project root resolves correctly`
