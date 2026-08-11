@@ -68,7 +68,7 @@ vim.api.nvim_create_autocmd("FileType", {
   group = group,
   pattern = "netrw",
   desc = "Trim window chrome the tree sidebar doesn't need and pin its width",
-  callback = function()
+  callback = function(args)
     vim.wo.number = false
     vim.wo.relativenumber = false
     vim.wo.signcolumn = "no"
@@ -78,5 +78,16 @@ vim.api.nvim_create_autocmd("FileType", {
     -- the automatic one on terminal resize (lua/mars/core/splits.lua),
     -- which would otherwise stretch it to an even share of the screen.
     vim.wo.winfixwidth = true
+
+    -- Netrw maps <C-l> buffer-locally to <Plug>NetrwRefresh, which shadows
+    -- the global split-navigation keymap (lua/mars/core/splits.lua) and,
+    -- from a sidebar, re-lists the tree into the neighbouring window
+    -- instead of moving focus there. Dropping the buffer-local map lets
+    -- the global <C-l> through; refresh stays reachable via <Plug>NetrwRefresh
+    -- and by re-entering the directory. Only <C-l> collides today, but the
+    -- whole set is swept so a future netrw mapping can't reintroduce this.
+    for _, key in ipairs({ "<C-h>", "<C-j>", "<C-k>", "<C-l>" }) do
+      pcall(vim.keymap.del, "n", key, { buffer = args.buf })
+    end
   end,
 })
