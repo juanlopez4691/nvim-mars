@@ -83,7 +83,6 @@ opt.autowrite = true
 opt.updatetime = 200
 opt.timeoutlen = 300
 opt.jumpoptions = "view"
-opt.sessionoptions = { "buffers", "curdir", "tabpages", "winsize", "help", "globals", "skiprtp", "folds" }
 opt.wildmode = "longest:full,full"
 opt.virtualedit = "block"
 opt.shortmess:append({ W = true, I = true, c = true, C = true })

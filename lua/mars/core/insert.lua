@@ -5,8 +5,6 @@
 -- word character for php/js/ts, and comment-leader autocontinuation
 -- disabled repo-wide.
 
-local M = {}
-
 --- Appends `;` at the end of the current line, in both normal and insert
 --- mode, unless the line already ends with one. Leaves the cursor in
 --- insert mode afterwards, matching plain `A`.
@@ -69,5 +67,3 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.opt_local.formatoptions:remove({ "c", "r", "o" })
   end,
 })
-
-return M

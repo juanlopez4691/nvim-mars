@@ -126,25 +126,6 @@ local function pretty_path(bufnr)
   return rel
 end
 
--- Per-server glyphs for the LSP-clients segment, keyed by the same names
--- used under lsp/*.lua. Only consulted when a Nerd Font is available;
--- otherwise clients are listed by plain name.
-local server_icons = {
-  lua_ls = "",
-  intelephense = "",
-  vtsls = "",
-  eslint = "",
-  jsonls = "",
-  tailwindcss = "󱏿",
-  dockerls = "",
-  docker_compose_language_service = "",
-  taplo = "",
-  marksman = "",
-  antlersls = "",
-  twiggy_language_server = "",
-  laravel_ls = "",
-}
-
 ---@param bufnr integer
 ---@return string
 local function lsp_clients(bufnr)
@@ -155,8 +136,7 @@ local function lsp_clients(bufnr)
 
   local names = {}
   for _, client in ipairs(clients) do
-    local icon = vim.g.have_nerd_font and server_icons[client.name]
-    names[#names + 1] = icon and (icon .. " " .. client.name) or client.name
+    names[#names + 1] = client.name
   end
   table.sort(names)
   return hl(table.concat(names, ", "), "Special")

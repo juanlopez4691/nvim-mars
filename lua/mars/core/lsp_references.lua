@@ -42,13 +42,6 @@ local function jump_reference(direction)
       return
     end
 
-    table.sort(marks, function(a, b)
-      if a[2] ~= b[2] then
-        return a[2] < b[2]
-      end
-      return a[3] < b[3]
-    end)
-
     local cursor = vim.api.nvim_win_get_cursor(0)
     local cur_row, cur_col = cursor[1] - 1, cursor[2]
 

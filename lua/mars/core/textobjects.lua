@@ -3,8 +3,6 @@
 -- entire-buffer text objects (`iB`/`aB`).  Registered in both operator-
 -- pending and visual modes so they compose with `d`/`y`/`c`/etc.
 
-local M = {}
-
 ---@param around boolean true for "around" (includes trailing paren)
 local function select_function_call(around)
   local node = vim.treesitter.get_node()
@@ -89,5 +87,3 @@ end, { silent = true, desc = "Inner buffer" })
 vim.keymap.set("x", "aB", function()
   select_buffer(true)
 end, { silent = true, desc = "Around buffer" })
-
-return M

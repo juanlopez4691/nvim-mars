@@ -1,17 +1,10 @@
--- Toggles absolute-vs-relative line numbers and the cursorline per mode and
--- window focus: relative numbers + cursorline in a focused, editable buffer
--- in normal mode; absolute numbers (no cursorline) when unfocused or in
--- insert mode; nothing at all in special buffers (floats, terminals,
--- quickfix, help, prompts, ...).
---
--- Detection is heuristic (buftype + floating-window config) rather than a
--- hardcoded filetype list, so new plugin UIs (dap-ui, opencode's terminal,
--- ...) are skipped automatically without this file needing an update.
+-- Relative numbers + cursorline in a focused normal-mode buffer; absolute
+-- numbers (no cursorline) when unfocused or in insert; nothing in special
+-- buffers. Detection is heuristic (buftype + floating-window config), not a
+-- filetype list, so new plugin UIs are skipped without this file updating.
 
-local M = {}
-
---- Buftypes that mark a window as plugin UI / special-purpose, never worth
---- numbering or highlighting the cursor line in.
+--- Buftypes that mark plugin UI / special-purpose windows, never worth
+--- numbering or highlighting.
 local UI_BUFTYPES = {
   help = true,
   nofile = true,
@@ -20,24 +13,18 @@ local UI_BUFTYPES = {
   terminal = true,
 }
 
---- Whether the current window is a plain, editable buffer worth managing:
---- not one of `UI_BUFTYPES`, not netrw, and not a floating/popup window
---- (relative ~= ""). Floats never get numbers/cursorline regardless of what
---- they hold, since they're popups (hover docs, previews, ...) rather than
---- editing surfaces.
+--- Whether the current window is a plain editable buffer: not one of
+--- `UI_BUFTYPES`, not netrw, and not a float. Floats are popups (hover docs,
+--- previews), never editing surfaces.
 ---@return boolean
 local function is_normal_window()
   if UI_BUFTYPES[vim.bo.buftype] then
     return false
   end
 
-  -- Netrw is the one UI the buftype check can't catch: its listing buffers
-  -- keep 'buftype' empty, so without this the WinLeave handler numbers the
-  -- explorer sidebar the moment it loses focus, undoing the chrome netrw's
-  -- own FileType handler strips (see lua/mars/core/netrw.lua). It's checked
-  -- by filetype rather than folded into UI_BUFTYPES precisely because it's
-  -- an exception to that heuristic, not another case of it. Netrw also
-  -- drives its own cursorline via g:netrw_cursor.
+  -- Netrw is the one UI the buftype check can't catch: its buffers keep
+  -- 'buftype' empty, so it's checked by filetype here. It drives its own
+  -- cursorline via g:netrw_cursor.
   if vim.bo.filetype == "netrw" then
     return false
   end
@@ -46,9 +33,8 @@ local function is_normal_window()
   return ok and win_config.relative == ""
 end
 
---- Applies numbers/relativenumber for the current window, given whether it
---- is focused and whether it's currently in insert mode. No-ops on windows
---- `is_normal_window` rejects, leaving their number columns untouched.
+--- Applies number/relativenumber for the current window given focus and
+--- insert mode. No-ops on windows `is_normal_window` rejects.
 ---@param focused boolean
 ---@param insert boolean
 local function apply_numbers(focused, insert)
@@ -60,8 +46,7 @@ local function apply_numbers(focused, insert)
   vim.wo.relativenumber = focused and not insert
 end
 
---- Applies cursorline for the current window, given whether it is focused.
---- No-ops on windows `is_normal_window` rejects.
+--- Applies cursorline for the current window given focus.
 ---@param focused boolean
 local function apply_cursorline(focused)
   if not is_normal_window() then
@@ -107,5 +92,3 @@ vim.api.nvim_create_autocmd("InsertLeave", {
     apply_numbers(true, false)
   end,
 })
-
-return M

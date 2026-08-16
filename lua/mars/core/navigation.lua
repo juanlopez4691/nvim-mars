@@ -82,13 +82,6 @@ local function query_nodes(buf, types)
     end
   end
 
-  table.sort(nodes, function(a, b)
-    if a.lnum ~= b.lnum then
-      return a.lnum < b.lnum
-    end
-    return a.col < b.col
-  end)
-
   return nodes
 end
 

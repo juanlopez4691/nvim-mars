@@ -18,15 +18,13 @@ local PROJECT_DIRS = { "node_modules/.bin", "vendor/bin" }
 --- fail with a clear "command not found").
 ---@param buf integer Buffer used to locate the project root
 ---@param name string Executable name, e.g. "prettierd"
----@param opts? { root?: string, project_dirs?: string[] } `root` overrides
----  project-root detection (mainly for tests); `project_dirs` overrides the
----  default lookup list.
+---@param opts? { root?: string } `root` overrides project-root detection.
 ---@return string path Resolved absolute path, or `name` unchanged
 function M.resolve(buf, name, opts)
   opts = opts or {}
   local root = opts.root or vim.fs.root(buf, { ".git" }) or vim.fn.getcwd()
 
-  for _, dir in ipairs(opts.project_dirs or PROJECT_DIRS) do
+  for _, dir in ipairs(PROJECT_DIRS) do
     local candidate = vim.fs.joinpath(root, dir, name)
     if vim.fn.executable(candidate) == 1 then
       return candidate

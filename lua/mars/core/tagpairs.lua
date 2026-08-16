@@ -1,5 +1,3 @@
-local M = {}
-
 vim.api.nvim_create_autocmd("InsertCharPre", {
   group = vim.api.nvim_create_augroup("mars_tagpairs", { clear = true }),
   pattern = { "html", "javascriptreact", "typescriptreact", "vue", "blade", "php" },
@@ -81,5 +79,3 @@ vim.api.nvim_create_autocmd("InsertLeave", {
     end
   end,
 })
-
-return M
