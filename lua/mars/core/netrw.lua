@@ -190,6 +190,61 @@ local function parent_line()
   return nil
 end
 
+--- Last window focused before the sidebar, per tab (see the WinEnter tracker
+--- below); split-opens land there instead of in the netrw window.
+---@type table<integer, integer>
+local last_main = {}
+
+--- Window a split-open should land in: the last non-netrw window focused in
+--- this tab (WinEnter tracker), falling back to the previous window and then
+--- to any non-netrw window. Never the sidebar.
+---@return integer win
+local function split_target()
+  local tab = vim.api.nvim_get_current_tabpage()
+  local target = last_main[tab]
+  if not (target and vim.api.nvim_win_is_valid(target)) then
+    vim.cmd("wincmd p")
+    target = vim.api.nvim_get_current_win()
+  end
+  if vim.bo[vim.api.nvim_win_get_buf(target)].filetype == "netrw" then
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+      if vim.bo[vim.api.nvim_win_get_buf(win)].filetype ~= "netrw" then
+        target = win
+        break
+      end
+    end
+  end
+  return target
+end
+
+--- `o`: open the file under the cursor in a horizontal split of the last
+--- active window, never the sidebar. Netrw's own `o` splits the netrw
+--- window itself, so this creates the split in the main window first and
+--- points `g:netrw_chgwin` at it, then lets netrw's own <CR> (which knows
+--- tree paths, symlinks and decorations) open the file into it. Directories
+--- keep netrw's <CR> (navigate in place), so no second netrw window appears.
+local function open_hsplit()
+  local word = vim.fn.getline("."):gsub("^[| ]*", ""):gsub("\t.*$", "")
+  if word == "" or word:sub(-1) == "/" then
+    activate()
+    return
+  end
+  local netrw_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_set_current_win(split_target())
+  -- A fresh, unmodified buffer in the split, so netrw will edit the file
+  -- into it even when the main buffer has unsaved changes.
+  vim.cmd("split")
+  vim.cmd("enew")
+  local split_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_set_current_win(netrw_win)
+  local prev = vim.g.netrw_chgwin
+  vim.g.netrw_chgwin = vim.fn.win_id2win(split_win)
+  -- "x" executes immediately (blocking), so netrw reads the chgwin above
+  -- before it is restored.
+  vim.api.nvim_feedkeys(vim.keycode("<CR>"), "mtx", false)
+  vim.g.netrw_chgwin = prev
+end
+
 --- Namespace for the tree-line overlay (see draw_tree_lines).
 local tree_ns = vim.api.nvim_create_namespace("mars_netrw_tree")
 
@@ -297,6 +352,17 @@ vim.api.nvim_create_autocmd("VimEnter", {
   callback = redefine_explore_commands,
 })
 
+vim.api.nvim_create_autocmd("WinEnter", {
+  group = group,
+  desc = "Track the last non-netrw window for split-opens",
+  callback = function()
+    local win = vim.api.nvim_get_current_win()
+    if vim.bo[vim.api.nvim_win_get_buf(win)].filetype ~= "netrw" then
+      last_main[vim.api.nvim_get_current_tabpage()] = win
+    end
+  end,
+})
+
 vim.api.nvim_create_autocmd("FileType", {
   group = group,
   pattern = "netrw",
@@ -344,6 +410,14 @@ vim.api.nvim_create_autocmd("FileType", {
       local queued = false
       vim.api.nvim_buf_attach(args.buf, false, {
         on_lines = function(_, buf)
+          -- Re-assert `o` on every listing write, synchronously: netrw maps
+          -- it buffer-locally before each render (after FileType), so this
+          -- must land after netrw's own map or the split would hit the
+          -- sidebar.
+          vim.keymap.set("n", "o", open_hsplit, {
+            buffer = buf,
+            desc = "Explorer: open file in a horizontal split of the last active window",
+          })
           if queued then
             return
           end
