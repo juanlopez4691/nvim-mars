@@ -11,6 +11,7 @@ local ns = vim.api.nvim_create_namespace("mars_patterns")
 local max_bytes = 1024 * 1024
 
 local debounce = require("mars.debounce")
+local color = require("mars.color")
 
 local keyword_groups = {
   TODO = "Todo",
@@ -24,28 +25,6 @@ local keyword_groups = {
 -- Per-colour highlight groups can't be predeclared, so one is created
 -- dynamically per distinct hex value and cached.
 local hex_group_cache = {} ---@type table<string, string>
-
---- Relative luminance of an sRGB channel value (0-1), per the WCAG formula.
----@param channel number
----@return number
-local function linearize(channel)
-  if channel <= 0.03928 then
-    return channel / 12.92
-  end
-  return ((channel + 0.055) / 1.055) ^ 2.4
-end
-
---- Readable foreground (black/white) for a hex background, by computing
---- relative luminance rather than assuming light or dark.
----@param hex string 6-digit hex colour, lowercase, no leading '#'
----@return string
-local function readable_fg(hex)
-  local r = linearize(tonumber(hex:sub(1, 2), 16) / 255)
-  local g = linearize(tonumber(hex:sub(3, 4), 16) / 255)
-  local b = linearize(tonumber(hex:sub(5, 6), 16) / 255)
-  local luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
-  return luminance > 0.5 and "#000000" or "#ffffff"
-end
 
 --- Expands a 3-digit hex colour to its 6-digit form; leaves 6-digit input
 --- unchanged.
@@ -69,7 +48,7 @@ local function hex_highlight_group(hex)
     return existing
   end
   local name = "MarsPatternsColor" .. hex
-  vim.api.nvim_set_hl(0, name, { bg = "#" .. hex, fg = readable_fg(hex) })
+  vim.api.nvim_set_hl(0, name, { bg = "#" .. hex, fg = color.readable_fg(hex) })
   hex_group_cache[hex] = name
   return name
 end
