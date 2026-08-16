@@ -64,7 +64,7 @@ local function node_is_suppressed(row, col)
   end
   for _, capture in ipairs(captures) do
     for _, prefix in ipairs(SUPPRESS_PREFIXES) do
-      if capture.capture:sub(1, #prefix) == prefix then
+      if vim.startswith(capture.capture, prefix) then
         return true
       end
     end

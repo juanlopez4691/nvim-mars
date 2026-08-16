@@ -24,7 +24,7 @@ local function lsp_root(buf, name)
       dirs[#dirs + 1] = client.root_dir
     end
     for _, dir in ipairs(dirs) do
-      if name:sub(1, #dir + 1) == dir .. "/" then
+      if vim.startswith(name, dir .. "/") then
         return dir
       end
     end

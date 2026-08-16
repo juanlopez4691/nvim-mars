@@ -300,7 +300,7 @@ local QUICKFIX_TYPE_NAMES = { E = "error", W = "warn", I = "info", N = "note" }
 ---@return string
 local function short_path(bufnr, path)
   local root = require("mars.core.rootdir").get(bufnr)
-  if path:sub(1, #root + 1) == root .. "/" then
+  if vim.startswith(path, root .. "/") then
     return "./" .. path:sub(#root + 2)
   end
   return path
