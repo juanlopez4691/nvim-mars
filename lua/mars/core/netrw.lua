@@ -38,6 +38,20 @@ local function on_right()
   return vim.g.mars_explorer_position == "right"
 end
 
+--- Opens the sidebar on the configured side if no netrw window is open
+--- anywhere, rooted at `dir` when given; otherwise does nothing, leaving the
+--- existing one in place. Netrw is only ever allowed this one window, so
+--- every entry point below converges here.
+---@param dir string|nil Root directory for a freshly opened sidebar.
+local function open_explorer(dir)
+  if explorer_win() then
+    return
+  end
+  -- The `:Lexplore` command is redefined below to route here, so call the
+  -- autoload function directly rather than recursing through the command.
+  vim.fn["netrw#Lexplore"](0, on_right() and 1 or 0, dir or "")
+end
+
 --- Toggles the sidebar: closes it if a netrw window is already open,
 --- otherwise opens one as a vertical split on the configured side. Always
 --- looks the window up by filetype rather than assuming a window number, so
@@ -49,7 +63,7 @@ local function toggle_explorer()
     vim.api.nvim_win_close(win, false)
     return
   end
-  vim.cmd.Lexplore({ bang = on_right() })
+  open_explorer()
 end
 
 --- Opens the sidebar rooted at the current buffer's directory. Reuses an
@@ -59,7 +73,7 @@ local function explore_current_file()
   local dir = vim.fn.expand("%:p:h")
   if dir == "" then
     -- getcwd() rather than vim.uv.cwd(): it can't fail (so `dir` stays a
-    -- plain string all the way to fnameescape), and it honours a window- or
+    -- plain string all the way to netrw), and it honours a window- or
     -- tab-local :lcd, which is the directory the user is actually working
     -- in. Matches how the rest of Mars falls back: see lua/mars/lang/
     -- format.lua and lua/mars/core/rootdir.lua.
@@ -69,11 +83,39 @@ local function explore_current_file()
   local win = explorer_win()
   if win then
     vim.api.nvim_set_current_win(win)
-    vim.cmd.Explore(vim.fn.fnameescape(dir))
+    -- Navigate the existing sidebar in place rather than recursing through
+    -- the redefined :Explore command (which would no-op while a netrw window
+    -- is open). netrw#Explore's first arg is the count, which the :Explore
+    -- command would have filled from `-count`.
+    vim.fn["netrw#Explore"](0, 0, 0, dir)
     return
   end
-  vim.cmd.Lexplore({ args = { vim.fn.fnameescape(dir) }, bang = on_right() })
+  open_explorer(dir)
 end
+
+--- Netrw's window-creating commands (:Explore, :Sexplore, ...) each open a
+--- netrw window in a different layout, the split multiplication this module
+--- exists to prevent. All of them are redefined to converge on the single
+--- sidebar: open it on the configured side if none is open, do nothing
+--- otherwise.
+local EXPLORE_COMMANDS = { "Explore", "Sexplore", "Vexplore", "Hexplore", "Lexplore", "Texplore" }
+
+--- Replaces the netrw explore commands with `open_explorer`. Netrw defines
+--- them with `command!`, so it clobbers overrides that came earlier; this
+--- must run after netrw's plugin loads, which is why it is called both
+--- eagerly at require time (covering :source reloads) and again on VimEnter
+--- (covering first startup, where netrw loads between the two). Each pass
+--- deletes the previous definition first, whatever it is.
+local function redefine_explore_commands()
+  for _, name in ipairs(EXPLORE_COMMANDS) do
+    pcall(vim.api.nvim_del_user_command, name)
+    vim.api.nvim_create_user_command(name, function(cmd)
+      open_explorer(cmd.args)
+    end, { nargs = "*", bang = true, bar = true, complete = "dir" })
+  end
+end
+
+redefine_explore_commands()
 
 vim.keymap.set("n", "<leader>e", toggle_explorer, { desc = "Explorer: toggle sidebar" })
 vim.keymap.set("n", "<leader>E", explore_current_file, { desc = "Explorer: open at current file" })
@@ -245,6 +287,15 @@ end
 -- gate behind vim.g.have_nerd_font here (see AGENTS.md's Icons section);
 -- this only trims window chrome the sidebar doesn't need.
 local group = vim.api.nvim_create_augroup("mars_netrw", { clear = true })
+
+-- Netrw's plugin loads after this module at startup and redefines its
+-- explore commands with `command!`, so re-assert the override once everything
+-- is sourced (see redefine_explore_commands).
+vim.api.nvim_create_autocmd("VimEnter", {
+  group = group,
+  desc = "Route netrw's window-creating commands to the single sidebar",
+  callback = redefine_explore_commands,
+})
 
 vim.api.nvim_create_autocmd("FileType", {
   group = group,
