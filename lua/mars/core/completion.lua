@@ -6,6 +6,12 @@ local M = {}
 
 vim.o.completeopt = "menu,menuone,noselect,popup,fuzzy"
 
+-- Buffer-word completion in every file, not just LSP buffers. Each letter
+-- extends `'complete'`: current file (.), windows (w), loaded/unloaded
+-- buffers (b/u), tags (t), includes (i), spelling (k). Paths complete via
+-- the native `<C-x><C-f>` filename / `<C-x><C-i>` include mapping.
+vim.o.complete = ".,w,b,u,t,i,kspell"
+
 -- Keymaps
 
 vim.cmd([[
@@ -280,7 +286,6 @@ vim.api.nvim_create_autocmd({ "CompleteDone", "InsertLeave" }, {
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(ev)
     local client = assert(vim.lsp.get_client_by_id(ev.data.client_id))
-    vim.bo[ev.buf].complete = ".,w,b,u,t,i,kspell"
     if client:supports_method("textDocument/completion") then
       vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true, convert = convert_item })
     end
