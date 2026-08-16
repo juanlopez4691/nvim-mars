@@ -88,19 +88,20 @@ local function pack_has(name)
 end
 
 --- Runs fn(fzf_lua) if available, otherwise warns. Expected to warn until
---- fzf-lua is added to this config.
+--- fzf-lua is added to this config. Uses fzf-lua.lua's shared wrapper so the
+--- dashboard's pickers get the same window size as the keymap ones.
 ---@param fn fun(fzf_lua: table)
 local function with_fzf_lua(fn)
   if not pack_has("fzf-lua") then
     vim.notify("fzf-lua isn't installed yet -- search is unavailable.", vim.log.levels.WARN)
     return
   end
-  local ok, fzf_lua = pcall(require, "fzf-lua")
+  local ok, fzf_lua = pcall(require, "mars.plugins.fzf-lua")
   if not ok then
     vim.notify("fzf-lua is registered but failed to load.", vim.log.levels.WARN)
     return
   end
-  fn(fzf_lua)
+  fzf_lua.use(fn)()
 end
 
 --- Whether a session module is loaded; auto-required startup modules show

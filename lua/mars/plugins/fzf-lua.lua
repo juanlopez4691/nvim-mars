@@ -1,6 +1,8 @@
 -- fzf-lua: fuzzy picker. No native Neovim API reproduces fuzzy-matched
 -- file/grep/symbol lists.
 
+local M = {}
+
 require("mars.pack").add({
   { src = "https://github.com/ibhagwan/fzf-lua" },
 })
@@ -67,6 +69,8 @@ local function use(fn)
     fn(require("fzf-lua"))
   end
 end
+
+M.use = use
 
 -- Find
 vim.keymap.set(
@@ -160,3 +164,5 @@ vim.keymap.set(
   end),
   { silent = true, desc = "Code: workspace symbols" }
 )
+
+return M
