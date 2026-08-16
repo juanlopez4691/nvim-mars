@@ -1,3 +1,6 @@
+-- Auto-close `</` tags on the typed `/`. Tag-name drift (renaming an open tag
+-- and getting the close tag wrong) is handled by core/autotag.lua.
+
 vim.api.nvim_create_autocmd("InsertCharPre", {
   group = vim.api.nvim_create_augroup("mars_tagpairs", { clear = true }),
   pattern = { "html", "javascriptreact", "typescriptreact", "vue", "blade", "php" },
@@ -36,46 +39,6 @@ vim.api.nvim_create_autocmd("InsertCharPre", {
         end
       end
       element = element:parent()
-    end
-  end,
-})
-
-vim.api.nvim_create_autocmd("InsertLeave", {
-  group = vim.api.nvim_create_augroup("mars_tagpairs_rename", { clear = true }),
-  pattern = { "html", "javascriptreact", "typescriptreact", "vue", "blade", "php" },
-  callback = function(ev)
-    local lang = vim.treesitter.get_lang(ev.buf)
-    if not lang then
-      return
-    end
-    local ok, query = pcall(
-      vim.treesitter.query.parse,
-      lang,
-      [[
-      (element
-        (start_tag (tag_name) @open)
-        (end_tag (tag_name) @close))
-    ]]
-    )
-    if not ok then
-      return
-    end
-    local parser = vim.treesitter.get_parser(ev.buf, lang)
-    local tree = parser:parse({ ev.buf })[1]
-    if not tree then
-      return
-    end
-    for _, match, _ in query:iter_matches(tree:root(), ev.buf) do
-      local open_node = match.open
-      local close_node = match.close
-      if open_node and close_node then
-        local open_text = vim.treesitter.get_node_text(open_node, ev.buf)
-        local close_text = vim.treesitter.get_node_text(close_node, ev.buf)
-        if open_text ~= close_text then
-          local sr, sc, er, ec = close_node:range()
-          vim.api.nvim_buf_set_text(ev.buf, sr, sc, er, ec, { open_text })
-        end
-      end
     end
   end,
 })

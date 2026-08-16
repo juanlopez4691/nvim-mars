@@ -1,7 +1,6 @@
 -- Native start screen for bare invocations: no file arguments, no piped-in
 -- stdin, initial buffer empty and unnamed. Menu actions resolve their
--- dependencies lazily at press time, so a missing picker/session/installer
--- renders dimmed and warns instead of erroring.
+-- dependencies lazily at press time.
 
 local ns = vim.api.nvim_create_namespace("mars.dashboard")
 
@@ -73,84 +72,11 @@ local function greeting()
   return ("Good %s, %s"):format(part, username)
 end
 
--- vim.pack's install directory. `pack_has` reads it directly instead of
--- `vim.pack.get()`, which re-scans every plugin's git state on each call
--- (~75ms); render() checks each action's availability, so the repeated
--- scans would add half a second to startup.
-local pack_opt_dir = vim.fs.joinpath(vim.fn.stdpath("data"), "site", "pack", "core", "opt")
-
---- Whether a plugin is installed with vim.pack, so its action can be shown
---- as available.
----@param name string
----@return boolean
-local function pack_has(name)
-  return vim.fn.isdirectory(vim.fs.joinpath(pack_opt_dir, name)) == 1
-end
-
---- Runs fn(fzf_lua) if available, otherwise warns. Expected to warn until
---- fzf-lua is added to this config. Uses fzf-lua.lua's shared wrapper so the
---- dashboard's pickers get the same window size as the keymap ones.
----@param fn fun(fzf_lua: table)
-local function with_fzf_lua(fn)
-  if not pack_has("fzf-lua") then
-    vim.notify("fzf-lua isn't installed yet -- search is unavailable.", vim.log.levels.WARN)
-    return
-  end
-  local ok, fzf_lua = pcall(require, "mars.plugins.fzf-lua")
-  if not ok then
-    vim.notify("fzf-lua is registered but failed to load.", vim.log.levels.WARN)
-    return
-  end
-  fzf_lua.use(fn)()
-end
-
---- Whether a session module is loaded; auto-required startup modules show
---- up in package.loaded, so this needs no require() probe.
----@return boolean
-local function has_session_module()
-  return package.loaded["mars.core.session"] ~= nil
-end
-
-local function restore_session()
-  local session = package.loaded["mars.core.session"]
-  if type(session) ~= "table" or type(session.restore) ~= "function" then
-    vim.notify("Session restore isn't available yet.", vim.log.levels.WARN)
-    return
-  end
-  session.restore()
-end
-
---- Whether a tool installer command (e.g. :Mason) is registered.
----@return boolean
-local function has_tool_installer()
-  return vim.fn.exists(":Mason") == 2
-end
-
-local function open_tool_installer()
-  if not has_tool_installer() then
-    vim.notify("No tool installer is configured yet.", vim.log.levels.WARN)
-    return
-  end
-  vim.cmd("Mason")
-end
-
---- Fetches plugin updates and opens vim.pack's confirmation in a popup.
----@return boolean
-local function update_plugins()
-  if vim.fn.exists(":PackUpdate") ~= 2 then
-    vim.notify("No pack manager is configured yet.", vim.log.levels.WARN)
-    return false
-  end
-  vim.cmd("PackUpdate")
-  return true
-end
-
 ---@class mars.dashboard.Action
 ---@field key string buffer-local keymap trigger
 ---@field desc string label shown in the menu
 ---@field icon string Nerd Font glyph, only shown when vim.g.have_nerd_font
----@field available fun(): boolean side-effect-free readiness check
----@field run fun() the handler; degrades gracefully on its own when unready
+---@field run fun() the handler
 
 ---@type mars.dashboard.Action[]
 local ACTIONS = {
@@ -158,55 +84,48 @@ local ACTIONS = {
     key = "f",
     desc = "Find File",
     icon = ICONS.file,
-    available = function()
-      return pack_has("fzf-lua")
-    end,
     run = function()
-      with_fzf_lua(function(fzf_lua)
+      -- Same shared wrapper as the keymap ones, so the pickers get the same window size.
+      local fzf = require("mars.plugins.fzf-lua")
+      fzf.use(function(fzf_lua)
         fzf_lua.files()
-      end)
+      end)()
     end,
   },
   {
     key = "g",
     desc = "Find Text",
     icon = ICONS.search,
-    available = function()
-      return pack_has("fzf-lua")
-    end,
     run = function()
-      with_fzf_lua(function(fzf_lua)
+      local fzf = require("mars.plugins.fzf-lua")
+      fzf.use(function(fzf_lua)
         fzf_lua.live_grep()
-      end)
+      end)()
     end,
   },
   {
     key = "r",
     desc = "Recent Files",
     icon = ICONS.history,
-    available = function()
-      return pack_has("fzf-lua")
-    end,
     run = function()
-      with_fzf_lua(function(fzf_lua)
+      local fzf = require("mars.plugins.fzf-lua")
+      fzf.use(function(fzf_lua)
         fzf_lua.oldfiles()
-      end)
+      end)()
     end,
   },
   {
     key = "s",
     desc = "Restore Session",
     icon = ICONS.save,
-    available = has_session_module,
-    run = restore_session,
+    run = function()
+      vim.cmd("MarsSessionRestore")
+    end,
   },
   {
     key = "q",
     desc = "Quit",
     icon = ICONS.power,
-    available = function()
-      return true
-    end,
     run = function()
       vim.cmd("qa")
     end,
@@ -219,17 +138,17 @@ local MAINTENANCE_ACTIONS = {
     key = "p",
     desc = "Update Plugins",
     icon = ICONS.puzzle,
-    available = function()
-      return vim.fn.exists(":PackUpdate") == 2
+    run = function()
+      vim.cmd("PackUpdate")
     end,
-    run = update_plugins,
   },
   {
     key = "m",
     desc = "Tool Installer",
     icon = ICONS.wrench,
-    available = has_tool_installer,
-    run = open_tool_installer,
+    run = function()
+      vim.cmd("Mason")
+    end,
   },
 }
 
@@ -259,11 +178,7 @@ local dashboard_row_actions = {}
 ---@return string desc, string key_hl, string desc_hl
 local function format_action(action)
   local icon = vim.g.have_nerd_font and (action.icon .. "  ") or ""
-  local desc = icon .. action.desc
-  if action.available() then
-    return desc, "Special", "Directory"
-  end
-  return desc, "Comment", "Comment"
+  return icon .. action.desc, "Special", "Directory"
 end
 
 --- Builds the (unpadded) content lines plus per-line highlight ranges.

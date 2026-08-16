@@ -12,6 +12,8 @@ local suppressed_patterns = {
 
 local levels = vim.log.levels
 
+local text = require("mars.text")
+
 local hl_by_level = {
   [levels.ERROR] = "DiagnosticError",
   [levels.WARN] = "DiagnosticWarn",
@@ -96,23 +98,6 @@ local function is_suppressed(msg)
   return false
 end
 
---- Truncates `s` to at most `width` display columns without splitting a
---- multi-byte codepoint.
----@param s string
----@param width integer
----@return string
-local function truncate_to_width(s, width)
-  local last_fit = ""
-  for i = 1, vim.fn.strchars(s) do
-    local candidate = vim.fn.strcharpart(s, 0, i)
-    if vim.fn.strdisplaywidth(candidate) > width then
-      break
-    end
-    last_fit = candidate
-  end
-  return last_fit
-end
-
 --- Greedily wraps text to at most `width` display columns, splitting on
 --- whitespace; a single word longer than `width` is hard-truncated.
 ---@param msg string
@@ -129,7 +114,7 @@ local function wrap_lines(msg, width)
         if line ~= "" then
           lines[#lines + 1] = line
         end
-        line = vim.fn.strdisplaywidth(word) > width and truncate_to_width(word, width) or word
+        line = vim.fn.strdisplaywidth(word) > width and text.truncate_to_width(word, width) or word
       else
         line = candidate
       end

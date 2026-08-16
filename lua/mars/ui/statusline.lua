@@ -1,29 +1,22 @@
 -- Native statusline wired up as an expression option. render() runs on
--- nearly every redraw, so anything touching the filesystem is cached per
--- buffer and invalidated by autocmd, never computed inline.
+-- nearly every redraw, so anything touching the filesystem is resolved
+-- cheaply per call and nothing expensive is computed inline.
 
 local color = require("mars.color")
+local text = require("mars.text")
 
 local M = {}
 
---- Doubles every "%" so buffer/register text survives the nested parse
---- Neovim performs on an expression-based 'statusline'.
----@param text string
----@return string
-local function escape(text)
-  return (text:gsub("%%", "%%%%"))
-end
-
 --- Wraps text in a built-in highlight group, resetting back to the
 --- statusline's own default group afterwards. With no group, just escapes.
----@param text string
+---@param text_str string
 ---@param group? string
 ---@return string
-local function hl(text, group)
+local function hl(text_str, group)
   if not group then
-    return escape(text)
+    return text.escape(text_str)
   end
-  return "%#" .. group .. "#" .. escape(text) .. "%*"
+  return "%#" .. group .. "#" .. text.escape(text_str) .. "%*"
 end
 
 --- Joins non-empty segments with a single space.
@@ -95,23 +88,6 @@ local function mode_info()
   return c:upper(), MODE_HL.StatusLine
 end
 
--- Per-buffer project root, found by walking up from the buffer's path.
--- That walk is the one genuinely expensive thing here, so it's resolved
--- once per buffer and kept until the buffer is renamed or goes away.
----@type table<integer, string|false>
-local root_cache = {}
-
----@param bufnr integer
----@return string?
-local function project_root(bufnr)
-  local cached = root_cache[bufnr]
-  if cached == nil then
-    cached = vim.fs.root(bufnr, { ".git" }) or false
-    root_cache[bufnr] = cached
-  end
-  return cached or nil
-end
-
 local group = vim.api.nvim_create_augroup("mars_statusline", { clear = true })
 
 apply_mode_highlights()
@@ -120,14 +96,6 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   group = group,
   desc = "Re-derive mode-block highlights after the colorscheme (re)loads",
   callback = apply_mode_highlights,
-})
-
-vim.api.nvim_create_autocmd({ "BufFilePost", "BufDelete", "BufWipeout" }, {
-  group = group,
-  desc = "Drop the cached statusline project root for the affected buffer",
-  callback = function(ev)
-    root_cache[ev.buf] = nil
-  end,
 })
 
 ---@param bufnr integer
@@ -139,7 +107,7 @@ local function pretty_path(bufnr)
   end
 
   local path = vim.fn.fnamemodify(name, ":p")
-  local root = project_root(bufnr)
+  local root = vim.fs.root(bufnr, { ".git" })
   local rel
   if root and path:sub(1, #root) == root then
     rel = path:sub(#root + 2)

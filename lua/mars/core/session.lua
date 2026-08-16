@@ -21,13 +21,12 @@ local function encode(str)
   end))
 end
 
---- Reverses `encode`, so a session filename shows the directory it belongs to.
+--- Reverses `encode` (percent-decoding, like vim.uri_decode), so a session
+--- filename shows the directory it belongs to.
 ---@param str string
 ---@return string
 local function decode(str)
-  return (str:gsub("%%(%x%x)", function(hex)
-    return string.char(tonumber(hex, 16))
-  end))
+  return vim.uri_decode(str)
 end
 
 ---@param cwd? string Defaults to the current working directory.

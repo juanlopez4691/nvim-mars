@@ -8,6 +8,8 @@
 
 local severity = vim.diagnostic.severity
 
+local text = require("mars.text")
+
 local nerd_font_icons = {
   [severity.ERROR] = "󰅚 ",
   [severity.WARN] = "󰀪 ",
@@ -123,35 +125,6 @@ end
 
 local CHIP_NAMESPACE = vim.api.nvim_create_namespace("mars_diagnostics_chip")
 
---- Truncates `s` to at most `width` display columns (walking characters,
---- not bytes, so multi-byte glyphs aren't split mid-character), appending
---- an ellipsis when it doesn't already fit.
----@param s string
----@param width integer
----@return string
-local function truncate_to_width(s, width)
-  if width <= 0 then
-    return ""
-  end
-  if vim.fn.strdisplaywidth(s) <= width then
-    return s
-  end
-  local ellipsis = "…"
-  local budget = width - vim.fn.strdisplaywidth(ellipsis)
-  if budget <= 0 then
-    return ellipsis
-  end
-  local last_fit = ""
-  for i = 1, vim.fn.strchars(s) do
-    local candidate = vim.fn.strcharpart(s, 0, i)
-    if vim.fn.strdisplaywidth(candidate) > budget then
-      break
-    end
-    last_fit = candidate
-  end
-  return last_fit .. ellipsis
-end
-
 --- Text-display width of the first window showing `bufnr` (excluding sign/
 --- number/fold columns), or nil if none is visible.
 ---@param bufnr integer
@@ -188,7 +161,7 @@ local function render_chip(bufnr, lnum, diag, text_width)
     -- on each side of icon+message (see the virt_text chunks below).
     local fixed = 2 + vim.fn.strdisplaywidth(arrow) + 2 + vim.fn.strdisplaywidth(icon)
     local available = text_width - vim.fn.strdisplaywidth(line) - fixed
-    message = truncate_to_width(message, available)
+    message = text.truncate_to_width(message, available, { ellipsis = true })
     if message == "" then
       return
     end

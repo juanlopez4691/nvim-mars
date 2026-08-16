@@ -2,6 +2,8 @@
 -- diagnostic summary. Suppressed on floating windows and non-file buffers
 -- (help, quickfix, terminal, netrw), where a winbar looks broken.
 
+local text = require("mars.text")
+
 local M = {}
 
 local severity = vim.diagnostic.severity
@@ -28,14 +30,6 @@ local function diagnostic_icons()
 end
 
 local expr = "%!v:lua.require'mars.ui.winbar'.render()"
-
---- Escapes '%' so user-derived text (filenames) can't be misread as
---- statusline/winbar field specifiers.
----@param text string
----@return string
-local function escape(text)
-  return (text:gsub("%%", "%%%%"))
-end
 
 --- Whether a window is floating (relative window, not a normal split).
 ---@param winid integer
@@ -88,7 +82,8 @@ function M.render()
   name = (name == "" and "[No Name]") or vim.fn.fnamemodify(name, ":~:.")
   local modified = vim.bo[bufnr].modified and " [+]" or ""
 
-  return escape(name) .. modified .. diagnostic_segment(bufnr)
+  -- '%' must be escaped so a filename can't be misread as a field specifier.
+  return text.escape(name) .. modified .. diagnostic_segment(bufnr)
 end
 
 --- Sets or clears the window-local 'winbar' for a single window depending

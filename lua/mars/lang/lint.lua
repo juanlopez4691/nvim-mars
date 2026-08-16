@@ -4,6 +4,7 @@
 -- runner here would just duplicate that.
 
 local tools = require("mars.lang.tools")
+local debounce = require("mars.debounce")
 
 local M = {}
 
@@ -207,34 +208,17 @@ end
 
 local DEBOUNCE_MS = 300
 
----@type table<integer, uv.uv_timer_t>
-local timers = {}
-
 ---@param buf integer
 local function schedule_lint(buf)
-  local timer = timers[buf]
-  if not timer then
-    timer = assert(vim.uv.new_timer())
-    timers[buf] = timer
-  end
-  timer:start(
-    DEBOUNCE_MS,
-    0,
-    vim.schedule_wrap(function()
-      M.lint(buf)
-    end)
-  )
+  debounce.debounced(buf, function()
+    M.lint(buf)
+  end, DEBOUNCE_MS)
 end
 
 ---@param buf integer
 local function forget_buf(buf)
   diagnostics_by_buf[buf] = nil
-  local timer = timers[buf]
-  if timer then
-    timer:stop()
-    timer:close()
-    timers[buf] = nil
-  end
+  debounce.drop(buf)
 end
 
 local augroup = vim.api.nvim_create_augroup("mars_lint", { clear = true })
@@ -249,7 +233,7 @@ vim.api.nvim_create_autocmd({ "BufWritePost", "BufReadPost", "InsertLeave" }, {
 
 vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
   group = augroup,
-  desc = "Drop cached diagnostics/timers for a closed buffer",
+  desc = "Drop cached diagnostics for a closed buffer",
   callback = function(ev)
     forget_buf(ev.buf)
   end,
