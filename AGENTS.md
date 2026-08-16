@@ -275,6 +275,9 @@ Two separate things are both called "linting" here: keep them distinct:
     twig.lua, antlers.lua, ts.lua, format.lua, lint.lua).
   - `lua/mars/plugins/`: one file per external plugin: `vim.pack.add()` call
     plus that plugin's config.
+  - `lua/mars/helpers/`: shared on-demand helpers (debounce, color, popup,
+    term, text). Not auto-loaded; required explicitly by whichever module
+    needs them.
   - `lua/mars/pack.lua`: the lazy-load wrapper around `vim.pack`.
   - `lua/mars/local.lua`: gitignored, user-specific overrides. Not part of
     the repo; see `lua/mars/local.lua.example`.
