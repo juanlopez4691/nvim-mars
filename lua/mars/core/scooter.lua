@@ -5,9 +5,9 @@
 
 local M = {}
 
-local term = require("mars.term")
+local term = require("mars.helpers.term")
 
----@type mars.term.State & { root: string? }
+---@type mars.helpers.term.State & { root: string? }
 local state = { win = nil, buf = nil, job = nil, root = nil }
 
 local augroup = vim.api.nvim_create_augroup("mars_scooter", { clear = true })

@@ -19,7 +19,7 @@ local context_pad = 50
 -- lines producing an unbounded number of extmarks.
 local max_levels = 64
 
-local debounce = require("mars.debounce")
+local debounce = require("mars.helpers.debounce")
 
 --- Buftypes that mark a window as plugin UI, never worth drawing guides in.
 local UI_BUFTYPES = {

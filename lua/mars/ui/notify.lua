@@ -12,7 +12,7 @@ local suppressed_patterns = {
 
 local levels = vim.log.levels
 
-local text = require("mars.text")
+local text = require("mars.helpers.text")
 
 local hl_by_level = {
   [levels.ERROR] = "DiagnosticError",

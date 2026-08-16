@@ -4,7 +4,7 @@
 -- runner here would just duplicate that.
 
 local tools = require("mars.lang.tools")
-local debounce = require("mars.debounce")
+local debounce = require("mars.helpers.debounce")
 
 local M = {}
 

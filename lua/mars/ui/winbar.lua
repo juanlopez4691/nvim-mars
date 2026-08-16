@@ -2,7 +2,7 @@
 -- diagnostic summary. Suppressed on floating windows and non-file buffers
 -- (help, quickfix, terminal, netrw), where a winbar looks broken.
 
-local text = require("mars.text")
+local text = require("mars.helpers.text")
 
 local M = {}
 

@@ -21,9 +21,9 @@ require("mars.pack").add({
   { src = "https://github.com/NickvanDyke/opencode.nvim" },
 })
 
-local term = require("mars.term")
+local term = require("mars.helpers.term")
 
----@type mars.term.State
+---@type mars.helpers.term.State
 local state = { win = nil, buf = nil, job = nil }
 
 --- Opens (or focuses) the terminal in a right-side split, starting

@@ -8,7 +8,7 @@
 
 local severity = vim.diagnostic.severity
 
-local text = require("mars.text")
+local text = require("mars.helpers.text")
 
 local nerd_font_icons = {
   [severity.ERROR] = "󰅚 ",

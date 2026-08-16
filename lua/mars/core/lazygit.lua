@@ -4,9 +4,9 @@
 
 local M = {}
 
-local term = require("mars.term")
+local term = require("mars.helpers.term")
 
----@type mars.term.State
+---@type mars.helpers.term.State
 local state = { win = nil, buf = nil, job = nil }
 
 local augroup = vim.api.nvim_create_augroup("mars_lazygit", { clear = true })

@@ -2,8 +2,8 @@
 -- nearly every redraw, so anything touching the filesystem is resolved
 -- cheaply per call and nothing expensive is computed inline.
 
-local color = require("mars.color")
-local text = require("mars.text")
+local color = require("mars.helpers.color")
+local text = require("mars.helpers.text")
 
 local M = {}
 

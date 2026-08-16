@@ -10,8 +10,8 @@ local ns = vim.api.nvim_create_namespace("mars_patterns")
 -- Buffers larger than this are skipped entirely rather than scanned.
 local max_bytes = 1024 * 1024
 
-local debounce = require("mars.debounce")
-local color = require("mars.color")
+local debounce = require("mars.helpers.debounce")
+local color = require("mars.helpers.color")
 
 local keyword_groups = {
   TODO = "Todo",

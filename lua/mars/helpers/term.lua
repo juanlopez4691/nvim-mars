@@ -4,7 +4,7 @@
 
 local M = {}
 
----@class mars.term.State
+---@class mars.helpers.term.State
 ---@field win integer?
 ---@field buf integer?
 ---@field job integer?
@@ -17,7 +17,7 @@ end
 
 --- Stops the job (if still running) and wipes the buffer, then clears
 --- `state`. Assumes the window is already gone or going away on its own.
----@param state mars.term.State
+---@param state mars.helpers.term.State
 function M.cleanup(state)
   if state.job and vim.fn.jobwait({ state.job }, 0)[1] == -1 then
     vim.fn.jobstop(state.job)
@@ -34,7 +34,7 @@ end
 --- Closes the tracked window. Job/buffer cleanup happens via the `WinClosed`
 --- autocmd registered at open, so the "user closed it" and "we closed it"
 --- paths converge.
----@param state mars.term.State
+---@param state mars.helpers.term.State
 function M.close(state)
   if is_valid_win(state.win) then
     vim.api.nvim_win_close(state.win, true)
@@ -44,14 +44,14 @@ function M.close(state)
 end
 
 --- The tracked window if it's still valid, else nil.
----@param state mars.term.State
+---@param state mars.helpers.term.State
 ---@return integer?
 function M.win(state)
   return is_valid_win(state.win) and state.win or nil
 end
 
 --- Focuses the tracked window. Returns whether it did.
----@param state mars.term.State
+---@param state mars.helpers.term.State
 ---@return boolean
 function M.focus(state)
   local win = M.win(state)
@@ -66,7 +66,7 @@ end
 --- `win_config`), tracking it in `state` and wiring job-exit/WinClosed
 --- teardown. Returns the winid, or nil if the job failed to start. Does not
 --- focus a window that's already open; callers check `M.win` first.
----@param state mars.term.State
+---@param state mars.helpers.term.State
 ---@param opts { cmd: string[], cwd: string, win_config: table, focus?: boolean }
 ---@return integer?
 function M.open(state, opts)
@@ -110,7 +110,7 @@ end
 
 --- Re-applies `win_config` to the tracked window, e.g. to keep a float
 --- centered and sized after a `VimResized`.
----@param state mars.term.State
+---@param state mars.helpers.term.State
 ---@param win_config table
 function M.recenter(state, win_config)
   local win = M.win(state)

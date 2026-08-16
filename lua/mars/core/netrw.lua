@@ -294,7 +294,7 @@ local NETRW_HELP = {
 --- Shows the netrw keymap reference in a centered floating window.
 --- Dismissible with `q`/`<Esc>`.
 local function show_netrw_help()
-  require("mars.popup").show(NETRW_HELP)
+  require("mars.helpers.popup").show(NETRW_HELP)
 end
 
 --- Namespace for the tree-line overlay (see draw_tree_lines).
