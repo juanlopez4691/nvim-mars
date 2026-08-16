@@ -171,3 +171,22 @@ for _, key in ipairs({ "<A-Down>", "<C-A-j>" }) do
     resize("down")
   end, { silent = true, desc = "Window: resize down" })
 end
+
+-- The <C-w> split/close commands replicated under <leader>w: the suffix
+-- letter matches the <C-w> one (so <leader>wv is :vsplit, exactly <C-w>v),
+-- giving a second, thumb-reachable way to run them. The native <C-w> maps
+-- and the navigation/resize maps above are left untouched.
+for suffix, spec in pairs({
+  v = { cmd = "vsplit", desc = "Window: split vertically" },
+  s = { cmd = "split", desc = "Window: split horizontally" },
+  n = { cmd = "new", desc = "Window: new empty split" },
+  c = { cmd = "close", desc = "Window: close current split" },
+  o = { cmd = "only", desc = "Window: close other splits" },
+  q = { cmd = "quit", desc = "Window: quit current split" },
+}) do
+  vim.keymap.set("n", "<leader>w" .. suffix, ("<Cmd>%s<CR>"):format(spec.cmd), {
+    silent = true,
+    desc = spec.desc,
+  })
+end
+vim.keymap.set("n", "<leader>w=", equalize, { silent = true, desc = "Window: equalize splits" })
