@@ -1,9 +1,5 @@
--- Blade (Laravel) and Antlers (Statamic) are both HTML-embedded templating
--- languages with no dedicated parser in nvim-treesitter's standard set (see
--- lua/mars/plugins/treesitter.lua's parser install list). Rather than leave
--- either filetype without any highlighting at all, this module maps them
--- onto the "html" parser so tags/attributes still light up; the templating
--- syntax itself just reads as plain text.
+-- Blade and Antlers have no parser in nvim-treesitter's standard set, so map
+-- them onto the "html" parser for basic tag/attribute highlighting.
 
 vim.filetype.add({
   pattern = {
@@ -14,10 +10,8 @@ vim.filetype.add({
 
 vim.treesitter.language.register("html", { "blade", "antlers" })
 
--- treesitter.lua starts highlighting itself for the filetypes it lists, but
--- "blade"/"antlers" aren't among them (it only knows about parser installs,
--- not this fallback mapping); so start highlighting for them here instead.
--- This runs alongside, not in place of, that module's own FileType autocmd.
+-- treesitter.lua only knows about parser installs, not this html fallback
+-- mapping, so start highlighting for these filetypes here.
 local group = vim.api.nvim_create_augroup("mars_blade", { clear = true })
 
 vim.api.nvim_create_autocmd("FileType", {

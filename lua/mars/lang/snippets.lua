@@ -1,12 +1,11 @@
--- Manual snippet expansion via the native vim.snippet.expand(), for triggers
--- not covered by an attached LSP server's own completion items (which
--- already expand as a side effect of accepting them; no wiring needed for
--- that path). Data is vendored from friendly-snippets (MIT, see
--- lua/mars/lang/snippets/LICENSE) as static JSON, not a runtime plugin.
+-- Manual snippet expansion via native vim.snippet.expand() for triggers an
+-- attached LSP server's completion items don't provide. Snippets are vendored
+-- from friendly-snippets (MIT, see lua/mars/lang/snippets/LICENSE) as static
+-- JSON, not a runtime plugin.
 --
--- Jumping between tabstops afterwards reuses Neovim's own default <Tab>/
--- <S-Tab> vim.snippet.jump() mapping; this module only extends <Tab> to
--- also expand a matching trigger word before falling through to it.
+-- Tabstop jumping reuses Neovim's own default vim.snippet.jump() mapping; this
+-- module only extends <Tab> to expand a matching trigger word before falling
+-- through to it.
 
 local M = {}
 
@@ -87,9 +86,8 @@ local function delete_word_before_cursor(len)
   vim.api.nvim_buf_set_text(0, row - 1, col - len, row - 1, col, {})
 end
 
---- <Tab> handler: jump an active snippet, else expand a matching trigger
---- word, else navigate the completion popup, else fall through to a literal
---- <Tab>.
+--- <Tab>: jump an active snippet, else expand a matching trigger word, else
+--- navigate the completion popup, else insert a literal <Tab>.
 function M.tab()
   if vim.snippet.active({ direction = 1 }) then
     vim.snippet.jump(1)

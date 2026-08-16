@@ -1,31 +1,13 @@
--- Minimal native jump-to-label motion: type exactly two characters, and a
--- single-character label appears over every visible match on screen; press
--- that label to jump the cursor there instantly.
---
--- This is a deliberately reduced-scope native stand-in for flash.nvim's
--- core `s`/`S` flow (see AGENTS.md's Native-First
--- Philosophy for the judgment call this file makes). Left out on purpose,
--- because covering them well needs real algorithmic machinery this file
--- doesn't have:
---   * Live incremental search-as-you-type with reusable/stable labels
---     across keystrokes (flash's `label.reuse`).
---   * Ambiguous-label avoidance while the pattern is still growing (flash's
---     `Labeler:skip`; buffer-wide regex scans to keep a label key from
---     colliding with a valid pattern continuation). This module sidesteps
---     the whole problem by fixing the search at exactly two characters
---     before any label is ever shown, so "still typing the pattern" and
---     "picking a label" never overlap.
---   * Multi-window jumping (only the current window's visible lines are
---     searched).
---   * Treesitter node selection (`S` in flash defaults to this; here it's
---     just an alias for the same two-char jump, since there's no
---     treesitter mode to bind it to).
+-- Native jump-to-label: type two characters, labels appear over every
+-- visible match, press one to jump. A reduced-scope stand-in for
+-- flash.nvim's `s`/`S`: fixing the search at
+-- exactly two characters sidesteps flash's label-reuse and
+-- label-collision machinery; only the current window is searched, and `S`
+-- is an alias (no treesitter mode here).
 
 local M = {}
 
---- Label alphabet in priority order: closest matches get the
---- easiest-to-reach keys first. Mirrors flash.nvim's default ordering
---- (home row first).
+--- Label alphabet in priority order: closest matches get the easiest keys.
 local ALPHABET = "asdfghjklqwertyuiopzxcvbnm"
 
 local NAMESPACE = vim.api.nvim_create_namespace("mars_jump")
@@ -38,8 +20,8 @@ vim.api.nvim_set_hl(0, HIGHLIGHT, { link = "IncSearch", default = true })
 ---@field col integer 0-indexed byte column where the match starts
 ---@field label string? single-character label assigned to this match
 
---- Reads one character from the user. Returns `nil` on `<Esc>`/`<C-c>` so
---- callers can treat those uniformly as "cancel".
+--- Reads one character; nil on `<Esc>`/`<C-c>` so callers treat those as
+--- "cancel".
 ---@return string?
 local function get_char()
   local ok, char = pcall(vim.fn.getcharstr)
@@ -49,9 +31,8 @@ local function get_char()
   return char
 end
 
---- Finds every occurrence of the literal (non-regex) `pattern` inside the
---- given window's currently visible lines, honouring 'ignorecase'/
---- 'smartcase' the same way a native `/` search would.
+--- Literal (non-regex) occurrences of `pattern` in the window's visible
+--- lines, honouring 'ignorecase'/'smartcase' like `/`.
 ---@param win integer
 ---@param pattern string
 ---@return MarsJump.Match[]
@@ -81,9 +62,8 @@ local function find_matches(win, pattern)
   return matches
 end
 
---- Sorts `matches` in place by absolute on-screen distance from `cursor`
---- (1-indexed line, 0-indexed col), so closer matches get shorter/
---- easier-to-reach labels, mirroring flash.nvim's default `label.distance`.
+--- Sorts `matches` by absolute on-screen distance from `cursor`, so closer
+--- matches get easier-to-reach labels.
 ---@param matches MarsJump.Match[]
 ---@param cursor integer[]
 local function sort_by_distance(matches, cursor)
@@ -96,10 +76,8 @@ local function sort_by_distance(matches, cursor)
   end)
 end
 
---- Assigns a single-character label (in `ALPHABET` order) to each match, up
---- to the alphabet's length. Matches beyond that are left unlabeled, the same
---- fallback flash.nvim uses when a screen has more matches than available
---- label characters.
+--- Assigns each match a single-character label in `ALPHABET` order; matches
+--- beyond the alphabet's length stay unlabeled.
 ---@param matches MarsJump.Match[]
 local function assign_labels(matches)
   for i, match in ipairs(matches) do
@@ -111,7 +89,7 @@ local function assign_labels(matches)
 end
 
 --- Renders one overlay extmark per labeled match, replacing the matched
---- text's first cell with the label character.
+--- text's first cell with the label.
 ---@param buf integer
 ---@param matches MarsJump.Match[]
 local function render(buf, matches)
@@ -133,11 +111,8 @@ local function clear(buf)
   vim.api.nvim_buf_clear_namespace(buf, NAMESPACE, 0, -1)
 end
 
---- Moves the cursor to `match`, handling the jumplist and operator-pending
---- inclusivity the same way flash.nvim does: entering charwise visual mode
---- before repositioning the cursor makes the resulting operator range
---- inclusive of the target character, instead of the exclusive default a
---- plain cursor move would give an operator-pending mapping.
+--- Moves to `match`, entering charwise visual mode first for operator
+--- mappings so the operator range is inclusive of the target character.
 ---@param win integer
 ---@param match MarsJump.Match
 ---@param is_op boolean
@@ -149,11 +124,9 @@ local function jump_to(win, match, is_op)
   vim.api.nvim_win_set_cursor(win, { match.lnum, match.col })
 end
 
---- Entry point bound to `s`/`S` below: reads a fixed two-character search
---- string, labels every visible match on screen, then reads one more
---- character and jumps to whichever match owns that label. Cancels
---- cleanly on `<Esc>`/`<C-c>` at any point, or if the pressed label
---- doesn't match any rendered one.
+--- Bound to `s`/`S`: reads a fixed two-character search string, labels
+--- every visible match, then jumps to the label keyed. Cancels on
+--- `<Esc>`/`<C-c>` or an unmatched label.
 function M.jump()
   local win = vim.api.nvim_get_current_win()
   local buf = vim.api.nvim_win_get_buf(win)
@@ -181,12 +154,9 @@ function M.jump()
 
   local label = get_char()
   clear(buf)
-  -- Forced full redraw, not the plain incremental one used above: the
-  -- overlay extmarks replaced real character cells, and some
-  -- terminals/multiplexers don't reliably repaint every affected cell on a
-  -- plain `redraw` once those extmarks are gone, leaving stale label
-  -- glyphs ("ghost" characters) on screen until an unrelated later redraw
-  -- (e.g. opening the cmdline) forces a real repaint over top of them.
+  -- Forced redraw: the overlay extmarks replaced real cells, and some
+  -- terminals don't repaint every affected cell on a plain `redraw` once
+  -- they're gone, leaving stale label glyphs ("ghost" characters).
   vim.cmd("redraw!")
 
   if not label then
@@ -201,10 +171,8 @@ function M.jump()
   end
 end
 
--- `S` isn't bound: it was only ever a redundant alias of `s` here (no
--- treesitter mode to distinguish them, unlike flash.nvim's real default;
--- see the module doc), and visual-mode `S` is needed for the conventional
--- vim-surround/mini.surround "add surround" binding instead.
+-- `S` isn't bound: it would only duplicate `s` (no treesitter mode to
+-- distinguish), and visual-mode `S` is wanted for surround-style bindings.
 vim.keymap.set({ "n", "x", "o" }, "s", M.jump, { desc = "Jump to a 2-char label" })
 
 return M

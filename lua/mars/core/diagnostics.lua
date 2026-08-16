@@ -1,25 +1,10 @@
--- Native diagnostics config: always-on inline diagnostic "chips" approximate
--- the look of a plugin like tiny-inline-diagnostic without one, including a
--- soft background behind the message and a pointed leading arrow. Neovim's
--- built-in virtual_text renderer can't do the two-tone arrow (confirmed by
--- reading vim/diagnostic.lua's _get_virt_text_chunks: each diagnostic's
--- prefix+message share exactly one highlight group, so a wedge painted in
--- the chip's own color sitting on the plain editor background needs its own,
--- separate group). So virtual_text is turned off entirely below, and this
--- module draws its own extmarks on DiagnosticChanged instead, using only
--- public APIs (vim.diagnostic.get(), nvim_buf_set_extmark); no dependency
--- on Neovim's private rendering internals. Icons fall back in three tiers:
--- Nerd Font glyphs (vim.g.have_nerd_font opt-in, see AGENTS.md's Icons
--- section), Unicode symbols (the default), or plain ASCII letters
--- (vim.g.mars_ascii_diagnostics opt-in, for terminals/log viewers that don't
--- render Unicode reliably; Neovim can't detect that any more than it can
--- detect a Nerd Font, hence another manual opt-in rather than a runtime
--- check).
+-- Native diagnostics: inline "chips" approximate tiny-inline-diagnostic
+-- without it. Neovim's virtual_text renderer can't do the two-tone arrow
+-- (one highlight group per diagnostic), so virtual_text is off and this
+-- draws its own extmarks on DiagnosticChanged with public APIs only.
+-- Icons: Nerd Font glyphs (opt-in), Unicode (default), or ASCII (opt-in).
 --
--- Scope-down: a line with more than one diagnostic only shows a chip for
--- the most severe one (matching severity_sort), not one chip per
--- diagnostic; the reference plugin stacks all of them side by side, which
--- would need tracking per-line diagnostic counts/widths this module doesn't.
+-- Scope-down: one chip per line showing only the most severe diagnostic.
 
 local severity = vim.diagnostic.severity
 
@@ -42,12 +27,9 @@ local ascii_icons = {
   [severity.HINT] = "H ",
 }
 
--- Leading arrow before the icon, pointing from the chip back at the
--- offending code. The Nerd Font tier uses the dedicated powerline "hard
--- divider" glyph (U+E0B2) tiny-inline-diagnostic.nvim itself uses for this
--- exact two-tone separator technique; general-purpose Unicode shapes like
--- ◀ aren't built for it and can render with inconsistent font coverage/color
--- fidelity depending on the terminal's fallback font.
+-- Leading arrow pointing back at the code. Nerd Font tier uses the powerline
+-- hard-divider glyph (U+E0B2) for the two-tone separator; general Unicode
+-- shapes have inconsistent font coverage.
 local NERD_FONT_ARROW = vim.fn.nr2char(0xe0b2)
 local UNICODE_ARROW = "◀"
 local ASCII_ARROW = "<"
@@ -65,10 +47,8 @@ local function diagnostic_arrow()
   return UNICODE_ARROW
 end
 
---- Picks the icon table for the current render. Read at call time, not
---- cached, since `vim.g.have_nerd_font`/`vim.g.mars_ascii_diagnostics` are
---- set by `lua/mars/local.lua`, which loads after this module (see
---- AGENTS.md's Icons section).
+--- Picks the icon table for the current render. Read at call time, since the
+--- opt-ins live in local.lua which loads after this module.
 ---@return table<integer, string>
 local function diagnostic_icons()
   if vim.g.have_nerd_font then
@@ -80,9 +60,8 @@ local function diagnostic_icons()
   return unicode_icons
 end
 
--- Highlight group names for the chip body and its leading arrow, per
--- severity. Names only; apply_chip_highlights() below fills in their
--- actual colors, since those depend on whichever colorscheme is active.
+-- Chip body and arrow highlight group names, per severity.
+-- apply_chip_highlights() fills in the colors from the active colorscheme.
 local CHIP_HL = {
   [severity.ERROR] = "DiagnosticVirtualTextError",
   [severity.WARN] = "DiagnosticVirtualTextWarn",
@@ -114,17 +93,13 @@ local function blend(fg, bg, ratio)
   return r * 65536 + g * 256 + b
 end
 
--- How much of each severity color to mix into the editor background for the
--- chip: too high looks like a solid banner, too low is indistinguishable
--- from a plain, unstyled background.
+-- Fraction of severity color mixed into the background for the chip.
 local CHIP_BLEND_RATIO = 0.18
 
---- (Re-)derives the chip and arrow highlight groups from whichever
---- colorscheme is currently active. The chip is `severity fg` on a blend of
---- that same color into 'Normal's background; the arrow is painted *in* the
---- chip's background color, but sitting on the plain editor background, so
---- it reads as the chip's own pointed left edge rather than a separate
---- glyph. Read at call time, not cached; see the module header.
+--- (Re-)derives chip/arrow highlight groups from the active colorscheme:
+--- the chip is severity fg on a blend into 'Normal' bg; the arrow is painted
+--- in the chip's bg sitting on the editor bg, reading as the chip's left edge.
+--- Read at call time, not cached (see the module header).
 local function apply_chip_highlights()
   local normal_bg = vim.api.nvim_get_hl(0, { name = "Normal" }).bg
   if not normal_bg then
@@ -177,11 +152,8 @@ local function truncate_to_width(s, width)
   return last_fit .. ellipsis
 end
 
---- The text-display width of the first window currently showing `bufnr`
---- (excluding sign/number/fold columns), or nil if none is visible. Chips
---- are buffer-scoped extmarks shared by every window on that buffer, so
---- this only optimizes for one of them; the same documented trade-off
---- lua/mars/ui/indent.lua's scope highlighting makes for split windows.
+--- Text-display width of the first window showing `bufnr` (excluding sign/
+--- number/fold columns), or nil if none is visible.
 ---@param bufnr integer
 ---@return integer?
 local function window_text_width(bufnr)
@@ -193,13 +165,9 @@ local function window_text_width(bufnr)
   return vim.api.nvim_win_get_width(win) - (info and info.textoff or 0)
 end
 
---- Draws one chip extmark at the end of `lnum` (0-indexed): a two-space gap,
---- the arrow, then the icon and message sharing the chip background, a
---- single line, always. Wrapping this onto extra lines (tried and reverted)
---- pushes the rest of the buffer down by the wrapped height and stops
---- looking like a compact chip at all; a message too long for the room
---- left on `lnum` is truncated with an ellipsis instead, same as any
---- other overflowing UI text in this config (e.g. lua/mars/ui/notify.lua).
+--- Draws one chip extmark at the end of `lnum`: a two-space gap, the arrow,
+--- then icon+message sharing the chip background, always a single line;
+--- long messages are truncated with an ellipsis.
 ---@param bufnr integer
 ---@param lnum integer
 ---@param diag vim.Diagnostic
@@ -259,12 +227,10 @@ local function refresh_chips(bufnr)
   end
 end
 
---- (Re-)applies the diagnostic config using the current icon tier, the chip
---- highlight overrides above, and a chip redraw for every open buffer.
---- `signs.text` is a plain table, not a per-render callback, so picking up
---- a Nerd Font opt-in in the sign column needs this re-run after local.lua
---- has loaded, not just a lazy read inside a callback; the chip colors need
---- the same re-run whenever the colorscheme (re)loads.
+--- (Re-)applies the diagnostic config with the current icon tier, chip
+--- highlights, and a chip redraw for every open buffer. Needs re-running
+--- after local.lua loads (signs.text is a plain table, not a callback) and
+--- on every colorscheme (re)load.
 local function apply()
   apply_chip_highlights()
   vim.diagnostic.config({
@@ -286,25 +252,20 @@ apply()
 
 local augroup = vim.api.nvim_create_augroup("mars_diagnostics_icons", { clear = true })
 
--- Re-apply once more after lua/mars/local.lua (loaded last, see init.lua)
--- has had a chance to set vim.g.have_nerd_font, so the sign column picks up
--- an opt-in that wasn't visible yet at this module's own load time.
+-- Re-apply after local.lua loads, so the sign column picks up a Nerd Font
+-- opt-in that wasn't visible at this module's load time.
 vim.api.nvim_create_autocmd("VimEnter", {
   group = augroup,
   callback = apply,
 })
 
--- Re-apply on every colorscheme (re)load, including lua/mars/local.lua
--- switching away from the default colorscheme, so the chip colors track
--- whichever palette is actually active instead of freezing to startup's.
+-- Re-apply on every colorscheme (re)load so chip colors track the palette.
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = augroup,
   callback = apply,
 })
 
--- Redraw a buffer's chips whenever its diagnostics change (LSP publish,
--- vim.diagnostic.set/reset, etc.); this is what actually keeps the chips
--- in sync, since virtual_text is off and nothing else draws them.
+-- Chips are the only renderer (virtual_text is off); redraw on change.
 vim.api.nvim_create_autocmd("DiagnosticChanged", {
   group = augroup,
   callback = function(ev)
@@ -312,9 +273,7 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
   end,
 })
 
--- Re-truncate affected buffers' chips when a window is resized (split
--- opened/closed, manual resize, ...); otherwise a chip sized for the old
--- width stays stale until its buffer's diagnostics next change.
+-- Re-truncate chips after a window resize; otherwise they stay sized stale.
 vim.api.nvim_create_autocmd("WinResized", {
   group = augroup,
   callback = function()
@@ -326,21 +285,16 @@ vim.api.nvim_create_autocmd("WinResized", {
   end,
 })
 
--- Diagnostics list: quickfix for workspace-wide diagnostics, location list
--- for the current buffer, plus errors-only variants of each. Opens the
--- resulting window itself so there's no extra `:copen`/`:lopen` step.
+-- Diagnostics list: quickfix for workspace diagnostics, location list for
+-- the current buffer, plus errors-only variants of each.
 
 local M = {}
 
 local QUICKFIX_TYPE_NAMES = { E = "error", W = "warn", I = "info", N = "note" }
 
---- Shortens an absolute `path` belonging to `bufnr`: if it's inside that
---- buffer's detected project root (lua/mars/core/rootdir.lua; an attached
---- LSP client's own root, else the nearest ".git" ancestor, else 'cwd'),
---- the root portion collapses to "./" so only the path *within* the
---- project stays visible. Left as the full absolute path otherwise;
---- claiming a "./" relationship for a path that isn't actually under the
---- detected root would be misleading, not shortening.
+--- Shortens `path` to "./"-relative when it sits under the buffer's project
+--- root (lua/mars/core/rootdir.lua). Unrelated paths stay absolute rather
+--- than claim a false "./" relationship.
 ---@param bufnr integer
 ---@param path string absolute path
 ---@return string
@@ -352,9 +306,8 @@ local function short_path(bufnr, path)
   return path
 end
 
---- 'quickfixtextfunc' implementation: shortens the file path (see
---- short_path above) instead of Neovim's own default, which always shows
---- the full path and crowds out the message on a deeply nested project.
+--- 'quickfixtextfunc' implementation shortening file paths so deeply nested
+--- projects don't crowd out the message.
 ---@param info { quickfix: integer, winid: integer, id: integer, start_idx: integer, end_idx: integer }
 ---@return string[]
 function M.quickfix_text(info)
@@ -380,19 +333,16 @@ end
 
 vim.o.quickfixtextfunc = "v:lua.require'mars.core.diagnostics'.quickfix_text"
 
---- Populates and opens the quickfix list with every diagnostic in the
---- workspace, optionally restricted to a minimum severity. Relies on
---- `setqflist`'s own `open` option rather than a separate `:copen`, since
---- issuing that after the fact can target the just-opened list window
---- itself instead of the window that owns it.
+--- Populates and opens the quickfix list with workspace diagnostics,
+--- optionally restricted to a severity. Passes `open` to setqflist; a
+--- separate :copen can target the just-opened list window itself.
 ---@param opts? { severity?: integer }
 local function workspace_diagnostics(opts)
   vim.diagnostic.setqflist(vim.tbl_extend("force", { open = true }, opts or {}))
 end
 
---- Populates and opens the current window's location list with the current
---- buffer's diagnostics, optionally restricted to a minimum severity. See
---- `workspace_diagnostics` for why `open` is passed instead of `:lopen`.
+--- Populates and opens the current buffer's diagnostics in the location
+--- list. See workspace_diagnostics for why `open` is passed.
 ---@param opts? { severity?: integer }
 local function buffer_diagnostics(opts)
   vim.diagnostic.setloclist(vim.tbl_extend("force", { open = true }, opts or {}))

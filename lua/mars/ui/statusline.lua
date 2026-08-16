@@ -1,17 +1,11 @@
--- Native statusline (see AGENTS.md, Native-First Philosophy). Wired up as
--- an expression option, so this module owns the whole computation and
--- there is no plugin behind it.
---
--- render() runs on nearly every redraw, so anything that would touch the
--- filesystem is cached per buffer and only recomputed from an autocmd,
--- never inline.
+-- Native statusline wired up as an expression option. render() runs on
+-- nearly every redraw, so anything touching the filesystem is cached per
+-- buffer and invalidated by autocmd, never computed inline.
 
 local M = {}
 
---- Doubles every "%" in text so it survives the nested statusline parse
---- Neovim performs on the string an expression-based 'statusline' returns.
---- Needed for anything derived from a buffer name or register, since
---- either can legitimately contain a literal "%".
+--- Doubles every "%" so buffer/register text survives the nested parse
+--- Neovim performs on an expression-based 'statusline'.
 ---@param text string
 ---@return string
 local function escape(text)
@@ -30,8 +24,7 @@ local function hl(text, group)
   return "%#" .. group .. "#" .. escape(text) .. "%*"
 end
 
---- Joins non-empty segments with a single space, dropping ones that had
---- nothing to show (e.g. no LSP clients attached, no macro recording).
+--- Joins non-empty segments with a single space.
 ---@param parts string[]
 ---@return string
 local function join(parts)
@@ -72,10 +65,9 @@ local function mode_info()
   return c:upper(), "StatusLine"
 end
 
--- Project root per buffer, found by walking up from the buffer's path.
--- That walk is the one genuinely expensive thing this module needs, so
--- it's resolved once per buffer and kept until the buffer is renamed or
--- goes away.
+-- Per-buffer project root, found by walking up from the buffer's path.
+-- That walk is the one genuinely expensive thing here, so it's resolved
+-- once per buffer and kept until the buffer is renamed or goes away.
 ---@type table<integer, string|false>
 local root_cache = {}
 
@@ -178,12 +170,11 @@ local function ruler()
   return hl(("%d:%-2d %3d%%"):format(line, col, percent))
 end
 
---- Renders the statusline for the window being redrawn. Wired up via
---- `vim.o.statusline = "%!v:lua.require'mars.ui.statusline'.render()"`,
---- which runs once per window, including inactive ones, so buffer-derived
---- segments must resolve their buffer through `g:statusline_winid` rather
---- than assuming the current window. `mode_info()` and `ruler()` are
---- inherently about the current window/cursor and are exempt from this.
+--- Renders the statusline for the window being redrawn. Runs once per
+--- window, including inactive ones, so buffer-derived segments must resolve
+--- their buffer through `g:statusline_winid`, not the current window.
+--- `mode_info()` and `ruler()` are inherently about the current window and
+--- are exempt.
 ---@return string
 function M.render()
   local winid = vim.g.statusline_winid or vim.api.nvim_get_current_win()

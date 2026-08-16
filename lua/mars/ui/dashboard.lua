@@ -1,20 +1,11 @@
--- Native start screen, shown once on VimEnter when Neovim starts bare: no
--- file arguments, no piped-in stdin, and the initial buffer still empty and
--- unnamed. Never appears for `nvim somefile`, `nvim -`, or when restoring a
--- session that already opened buffers.
---
--- Every action below resolves its dependency lazily, at press time. None of
--- them are hard requirements of this module: a picker, a session module,
--- and a tool installer may or may not be wired up yet elsewhere in the
--- config. When one is missing the entry still renders (dimmed) and warns
--- instead of erroring when pressed -- see `with_fzf_lua`, `restore_session`,
--- and `open_tool_installer` below.
+-- Native start screen for bare invocations: no file arguments, no piped-in
+-- stdin, initial buffer empty and unnamed. Menu actions resolve their
+-- dependencies lazily at press time, so a missing picker/session/installer
+-- renders dimmed and warns instead of erroring.
 
 local ns = vim.api.nvim_create_namespace("mars.dashboard")
 
---- Nerd Font glyphs. Only ever read behind `vim.g.have_nerd_font` at draw
---- time (never memoized) -- see options.lua for why that flag can't be
---- resolved at require-time.
+--- Nerd Font glyphs; only read behind `vim.g.have_nerd_font` at draw time.
 local ICONS = {
   file = "",
   search = "",
@@ -41,12 +32,9 @@ local HEADER = vim.split(
   { trimempty = true }
 )
 
--- Right-pad every header line to the same width. render()'s per-line
--- centering computes each row's own left margin from its own length, so
--- rows shorter than the widest one -- trailing whitespace in a raw
--- multi-line string literal isn't reliably preserved through every step --
--- would get centered independently and throw the letterforms' column
--- alignment off, even though the underlying glyphs are correctly aligned.
+-- Right-pad all header lines to equal width: per-line centering would
+-- otherwise misalign the letterforms, and trailing whitespace in the raw
+-- string literal isn't reliably preserved.
 do
   local max_width = 0
   for _, line in ipairs(HEADER) do
@@ -57,10 +45,8 @@ do
   end
 end
 
--- Dedicated group (not the shared "Title") so recoloring the header can't
--- affect anything else that happens to use "Title" -- re-applied on every
--- ColorScheme (re)load since the color is hardcoded, not derived from
--- whatever palette is active.
+-- Dedicated group (not "Title") so recoloring can't affect other "Title"
+-- users; re-applied on ColorScheme since the color is hardcoded.
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("mars_dashboard_header", { clear = true }),
   callback = function()
@@ -69,7 +55,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 vim.api.nvim_set_hl(0, "MarsDashboardHeader", { fg = "#c1440e", bold = true })
 
---- Time-of-day greeting, addressed to the logged-in user.
+--- Time-of-day greeting for the logged-in user.
 ---@return string
 local function greeting()
   local hour = tonumber(vim.fn.strftime("%H")) or 12
@@ -87,9 +73,7 @@ local function greeting()
   return ("Good %s, %s"):format(part, username)
 end
 
---- Whether a plugin has been registered with `vim.pack` (via
---- `lua/mars/plugins/*.lua`), regardless of whether it has been loaded yet.
---- Side-effect-free -- safe to call just to decide whether to dim an entry.
+--- Whether a plugin is registered with vim.pack, loaded or not.
 ---@param name string
 ---@return boolean
 local function pack_has(name)
@@ -101,9 +85,8 @@ local function pack_has(name)
   return false
 end
 
---- Runs `fn(fzf_lua)` if fzf-lua is available, otherwise warns. fzf-lua is
---- an approved dependency (see AGENTS.md) but isn't added to this config
---- yet, so this is expected to warn today.
+--- Runs fn(fzf_lua) if available, otherwise warns. Expected to warn until
+--- fzf-lua is added to this config.
 ---@param fn fun(fzf_lua: table)
 local function with_fzf_lua(fn)
   if not pack_has("fzf-lua") then
@@ -118,10 +101,8 @@ local function with_fzf_lua(fn)
   fn(fzf_lua)
 end
 
---- Session restore/list. Any future session module lives under
---- lua/mars/core/ and is auto-required at startup (see init.lua), so
---- checking `package.loaded` is enough to tell whether it exists -- no
---- probing require() needed.
+--- Whether a session module is loaded; auto-required startup modules show
+--- up in package.loaded, so this needs no require() probe.
 ---@return boolean
 local function has_session_module()
   return package.loaded["mars.core.session"] ~= nil
@@ -136,8 +117,7 @@ local function restore_session()
   session.restore()
 end
 
---- Whether a tool installer command is registered (e.g. mason.nvim's
---- `:Mason`, once lua/mars/plugins/mason.lua exists).
+--- Whether a tool installer command (e.g. :Mason) is registered.
 ---@return boolean
 local function has_tool_installer()
   return vim.fn.exists(":Mason") == 2
@@ -151,8 +131,7 @@ local function open_tool_installer()
   vim.cmd("Mason")
 end
 
---- Summarizes plugins registered via vim.pack. Native, so unlike the
---- entries above this always works.
+--- Summarizes plugins registered via vim.pack.
 local function show_plugin_status()
   local plugins = vim.pack.get()
   if #plugins == 0 then
@@ -167,10 +146,10 @@ local function show_plugin_status()
 end
 
 ---@class mars.dashboard.Action
----@field key string single buffer-local keymap trigger
+---@field key string buffer-local keymap trigger
 ---@field desc string label shown in the menu
 ---@field icon string Nerd Font glyph, only shown when vim.g.have_nerd_font
----@field available fun(): boolean cheap, side-effect-free readiness check
+---@field available fun(): boolean side-effect-free readiness check
 ---@field run fun() the handler; degrades gracefully on its own when unready
 
 ---@type mars.dashboard.Action[]
@@ -257,9 +236,7 @@ local MAINTENANCE_ACTIONS = {
 --- Buffer currently holding the dashboard, if any.
 local dashboard_buf = nil
 
---- {width, height} last rendered at, so a resize event that doesn't
---- actually change this window's size (e.g. a split elsewhere) doesn't
---- trigger a redundant re-render.
+--- {width, height} last rendered at, to skip redundant re-renders.
 local dashboard_size = nil
 
 --- 1-indexed buffer rows the cursor is allowed to rest on, updated on every
@@ -267,10 +244,8 @@ local dashboard_size = nil
 ---@type integer[]
 local dashboard_action_rows = {}
 
---- The last row restrict_cursor() settled on, used to tell which direction
---- the cursor is travelling; reset to nil on every render() since a resize
---- renumbers every row. nil means "no established direction yet" -- e.g.
---- right after a render, or after the initial (unrestricted) placement.
+--- Last row restrict_cursor() settled on, for travel direction; reset every
+--- render since a resize renumbers rows. nil = no established direction.
 ---@type integer?
 local dashboard_last_row = nil
 
@@ -279,9 +254,7 @@ local dashboard_last_row = nil
 ---@type table<integer, fun()>
 local dashboard_row_actions = {}
 
---- The description half of a menu line -- icon (if any) plus label. The key
---- itself is laid out separately (see add_group in build_content()), right
---- -aligned at a shared column across every group.
+--- Description half of a menu line: icon (if any) plus label.
 ---@param action mars.dashboard.Action
 ---@return string desc, string key_hl, string desc_hl
 local function format_action(action)
@@ -294,15 +267,9 @@ local function format_action(action)
 end
 
 --- Builds the (unpadded) content lines plus per-line highlight ranges.
---- `header_count` marks where the header group (ASCII art + blank +
---- greeting) ends and the menu group begins -- the two are centered as
---- independent blocks (see render()), since the wide ASCII art and the
---- much narrower menu text would otherwise force the menu to share the
---- art's left margin instead of genuinely centering on its own.
---- `menu_items` pairs each actionable menu entry with its 1-indexed
---- position -- everything else (header, blank lines, group labels) is
---- unreachable by the cursor, see the CursorMoved restriction and the
---- <cr> handler set up in open().
+--- `header_count` marks where the header group ends and the menu group
+--- begins (centered as independent blocks in render()); `menu_items` pairs
+--- each actionable menu entry with its 1-indexed buffer position.
 ---@return string[] lines
 ---@return {line: integer, col_start: integer, col_end: integer, hl: string}[] highlights
 ---@return integer header_count
@@ -335,13 +302,9 @@ local function build_content()
   table.insert(lines, "")
   table.insert(lines, "")
 
-  -- Every group's key is right-aligned at one shared column, computed from
-  -- the widest description across *both* groups, so the key column lines
-  -- up down the whole menu instead of just within one group. Alignment is
-  -- measured in display width, not byte length: with a Nerd Font enabled,
-  -- `desc` starts with an icon glyph, and Nerd Font codepoints don't all
-  -- encode to the same number of UTF-8 bytes even when they render at the
-  -- same cell width -- byte-based alignment would drift the key column.
+  -- Keys right-align at one shared column (widest desc across both groups),
+  -- measured in display width, not bytes: Nerd Font glyphs vary in UTF-8
+  -- byte length, so byte-based alignment would drift.
   local desc_width = 0
   for _, group in ipairs({ ACTIONS, MAINTENANCE_ACTIONS }) do
     for _, action in ipairs(group) do
@@ -359,8 +322,7 @@ local function build_content()
       local text = desc .. (" "):rep(gap) .. action.key
       table.insert(lines, text)
       table.insert(menu_items, { line = #lines, run = action.run })
-      -- Extmark columns are byte offsets, unlike the display-width math
-      -- above -- #desc and #action.key are correct here.
+      -- Extmark columns are byte offsets; #desc and #action.key are correct here.
       add(desc_hl, 0, #desc)
       add(key_hl, #text - #action.key, -1)
     end
@@ -386,10 +348,7 @@ local function block_width(lines)
   return width
 end
 
---- The window's current {width, height}, or nil if the dashboard isn't
---- shown anywhere. Compared before re-rendering on a resize event so a
---- resize that doesn't actually affect this window (e.g. a split
---- elsewhere) doesn't trigger a redundant re-render.
+--- The window's current {width, height}, or nil if not shown anywhere.
 ---@return integer[]? size {width, height}
 local function current_size()
   if not dashboard_buf or not vim.api.nvim_buf_is_valid(dashboard_buf) then
@@ -403,16 +362,10 @@ local function current_size()
 end
 
 --- Renders (or re-renders, e.g. after a resize) the dashboard into its
---- buffer, centered in whichever window currently shows it. The header
---- (ASCII art) and the menu are centered as two independent blocks, each
---- on the *window's* width, not on each other -- the art is much wider
---- than the menu text, so sharing one block width would either force the
---- menu to hug the art's left edge instead of genuinely centering, or
---- (the other way around) misalign the art's own rows, which need one
---- rigid shared left margin, not a per-row center. The greeting is the one
---- line centered *within* the header block instead of using its flat
---- margin, since a short line of text under a wide logo reads better
---- centered under it than flush against its left edge.
+--- buffer, centered in whichever window shows it. Header and menu center as
+--- two independent blocks on the window width -- the art is far wider than
+--- the menu, and its own rows need a rigid shared left margin; the greeting
+--- centers within the header block.
 local function render()
   if not dashboard_buf or not vim.api.nvim_buf_is_valid(dashboard_buf) then
     return
@@ -476,7 +429,7 @@ local function render()
     local pad = line_pad(i, text)
     local col_start = pad + hl.col_start
     -- -1 means "to end of line"; nvim_buf_set_extmark wants a real byte
-    -- offset for end_col, so resolve it against the (unpadded) text length.
+    -- offset, so resolve it against the (unpadded) text length.
     local col_end = pad + (hl.col_end == -1 and #text or hl.col_end)
     vim.api.nvim_buf_set_extmark(dashboard_buf, ns, top_margin + hl.line, col_start, {
       end_col = col_end,
@@ -485,11 +438,8 @@ local function render()
   end
 end
 
---- Snaps the cursor onto the nearest actionable menu row (and its first
---- non-blank column) -- mirrors snacks.dashboard's own cursor restriction
---- The header and blank padding aren't interactive,
---- so wandering onto them just invites accidental edits on a
---- non-modifiable buffer with no useful feedback.
+--- Snaps the cursor onto the nearest actionable menu row, at its first
+--- non-blank column (header and padding aren't interactive).
 local function restrict_cursor()
   if #dashboard_action_rows == 0 or not dashboard_buf or not vim.api.nvim_buf_is_valid(dashboard_buf) then
     return
@@ -502,10 +452,9 @@ local function restrict_cursor()
   local target = vim.api.nvim_win_get_cursor(win)[1]
   local row = dashboard_row_actions[target] and target or nil
 
-  -- Landed on a gap (blank line or group label): skip in the direction of
-  -- travel to the next actionable row, so stepping with j/k walks straight
-  -- past a multi-line gap (e.g. into the next group) instead of always
-  -- snapping back to whichever edge happens to be numerically closer.
+  -- Landed on a gap (blank line or group label): skip in the travel
+  -- direction to the next actionable row, so j/k walks past a multi-line
+  -- gap instead of always snapping to the numerically nearest edge.
   if not row and dashboard_last_row then
     if target > dashboard_last_row then
       for _, candidate in ipairs(dashboard_action_rows) do
@@ -524,8 +473,7 @@ local function restrict_cursor()
     end
   end
 
-  -- No established direction yet (fresh render), or travel overshot past
-  -- an end with nothing left to skip to: fall back to nearest by distance.
+  -- No direction established yet, or travel overshot an end: nearest by distance.
   if not row then
     row = dashboard_action_rows[1]
     for _, candidate in ipairs(dashboard_action_rows) do
@@ -538,17 +486,14 @@ local function restrict_cursor()
   dashboard_last_row = row
 
   local line = vim.api.nvim_buf_get_lines(dashboard_buf, row - 1, row, false)[1] or ""
-  -- Skip past any leading Nerd Font icon: its bytes are outside Lua's ASCII
-  -- word/punctuation classes, so this lands on the first character of the
-  -- actual label instead of the cursor block sitting on top of the glyph
-  -- (mirrors snacks.dashboard's own cursor placement).
+  -- Skip past any leading Nerd Font icon: its bytes aren't ASCII
+  -- word/punctuation, so this lands on the first label character.
   local col = (line:find("[%w%p]") or line:find("%S") or 1) - 1
   vim.api.nvim_win_set_cursor(win, { row, col })
 end
 
---- Whether the current buffer/invocation is eligible for the dashboard: no
---- file arguments, no piped stdin, and an empty, unnamed, ordinary buffer.
---- Never hijacks `nvim somefile`.
+--- Whether the current invocation is eligible: no file arguments, no piped
+--- stdin, and an empty, unnamed, ordinary buffer. Never hijacks `nvim somefile`.
 ---@return boolean
 local function is_eligible()
   if vim.fn.argc(-1) > 0 then
@@ -563,9 +508,8 @@ local function is_eligible()
   if vim.bo.modified then
     return false
   end
-  -- Catches piped stdin (and any other case where the buffer already holds
-  -- more than its initial empty line): line2byte() of one past the last
-  -- line is -1 only when there is nothing after it.
+  -- line2byte() one past the last line is -1 only when nothing follows it
+  -- (catches piped stdin).
   if vim.fn.line2byte(vim.fn.line("$") + 1) ~= -1 then
     return false
   end
@@ -585,11 +529,9 @@ local function open()
   vim.bo[buf].filetype = "marsdashboard"
 
   local win = vim.api.nvim_get_current_win()
-  -- Window-local options, captured before being clobbered below so they can
-  -- be restored once the dashboard buffer is gone. Without this, opening a
-  -- real file into the dashboard's own window (its usual find-file/recent
-  -- actions do exactly that) silently inherits signcolumn="no" and the rest
-  -- Window-local options don't reset just because the buffer changed.
+  -- Window-local options don't reset when the buffer changes, so a real
+  -- file opened in this window (via find-file/recent) would inherit the
+  -- dashboard's settings. Capture them to restore on wipeout.
   local saved_options = {
     number = vim.wo[win].number,
     relativenumber = vim.wo[win].relativenumber,
@@ -610,8 +552,7 @@ local function open()
   vim.wo[win].spell = false
   vim.wo[win].wrap = false
 
-  -- 'laststatus' is global, not per-window (unlike everything above), so it
-  -- needs its own save/restore rather than living in saved_options.
+  -- 'laststatus' is global, so save/restore it separately.
   local saved_laststatus = vim.o.laststatus
   vim.o.laststatus = 0
 
@@ -657,24 +598,16 @@ vim.api.nvim_create_autocmd("VimEnter", {
   nested = true,
   once = true,
   callback = function()
-    -- Read at call time, not memoized above: VimEnter fires after
-    -- lua/mars/local.lua (loaded last, see init.lua) has had a chance to
-    -- set this, same as any other user-tunable global (AGENTS.md's Icons
-    -- section covers why in more detail for vim.g.have_nerd_font).
+    -- Read at call time: VimEnter fires after lua/mars/local.lua loads.
     if vim.g.mars_dashboard_enabled ~= false and is_eligible() then
       open()
     end
   end,
 })
 
--- Deferred to the next tick, not read synchronously inside the event: at
--- the exact moment WinResized/VimResized fires, Neovim's own internal
--- geometry recalculation for this window isn't always finished yet, so
--- nvim_win_get_width()/height() called immediately can still return a
--- stale, pre-resize value; render() would then center against the wrong
--- size, and nothing re-corrects it until another resize happens to come
--- along later and read the (by then genuinely current) size. Scheduling
--- gives Neovim's own resize handling a chance to finish first.
+-- Deferred to the next tick: Neovim's own geometry recalculation for this
+-- window isn't finished when the resize event fires, so an immediate read
+-- can return a stale size and mis-center the dashboard until the next resize.
 vim.api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
   desc = "Re-center the Mars dashboard",
   callback = function()

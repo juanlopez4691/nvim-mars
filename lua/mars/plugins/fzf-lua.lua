@@ -1,13 +1,12 @@
 -- fzf-lua: fuzzy picker. No native Neovim API reproduces fuzzy-matched
--- file/grep/symbol lists (see AGENTS.md's approved exception list).
+-- file/grep/symbol lists.
 
 require("mars.pack").add({
   { src = "https://github.com/ibhagwan/fzf-lua" },
 })
 
--- Curated set of LSP symbol kinds worth surfacing in the filtered symbol
--- pickers below, trimming noise like Strings/Numbers/Booleans that rarely
--- matter when jumping around a codebase.
+-- LSP symbol kinds worth surfacing in the filtered symbol picker below;
+-- trims noise like Strings/Numbers/Booleans that rarely matter when jumping.
 local symbol_kinds = {
   "Class",
   "Closure",
@@ -33,9 +32,8 @@ for _, kind in ipairs(symbol_kinds) do
   wanted_symbol_kinds[kind] = true
 end
 
---- `regex_filter` for fzf-lua's LSP symbol pickers, despite the name, also
---- accepts a predicate function called per-entry, used here to filter by
---- `entry.kind` instead of matching against display text.
+--- fzf-lua's `regex_filter`, despite the name, also accepts a predicate
+--- called per-entry, used here to filter by `entry.kind`.
 ---@param entry { kind: string }
 ---@return boolean
 local function filter_symbol_kinds(entry)
@@ -44,19 +42,18 @@ end
 
 local is_setup = false
 
---- Wrap a picker call so fzf-lua's `setup()` runs on first use rather than
---- at startup. Keymaps are the only entry point here (no event/ft/cmd to
---- hook via `mars.pack`'s `on()`), so the deferral lives in the wrapper
---- itself.
+--- Run fzf-lua's `setup()` on first use rather than at startup. Keymaps are
+--- the only entry point here (no event/ft/cmd to hook via `mars.pack.on`),
+--- so the deferral lives in this wrapper.
 ---@param fn fun(fzf_lua: table)
 ---@return fun()
 local function use(fn)
   return function()
     if not is_setup then
       is_setup = true
-      -- "default-title" labels each picker window with its name; otherwise
-      -- fzf-lua's own defaults apply, including icon choices, left alone
-      -- here rather than baked in from `vim.g.have_nerd_font`.
+      -- "default-title" labels each picker window with its name; fzf-lua's
+      -- other defaults (incl. icons) are left alone rather than baked in
+      -- from `vim.g.have_nerd_font`.
       require("fzf-lua").setup({ "default-title" })
     end
     fn(require("fzf-lua"))

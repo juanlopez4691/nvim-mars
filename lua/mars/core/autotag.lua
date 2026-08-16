@@ -1,21 +1,7 @@
--- Native tag auto-close/auto-rename, replacing nvim-ts-autotag.
--- Two behaviours, both Treesitter-driven and reacting to
--- `TextChangedI` rather than intercepting specific keys, since the buffer
--- has to already contain the just-typed character for the parser to see a
--- complete tag:
---   * Auto-close: typing the '>' that completes an opening tag inserts its
---     matching closing tag immediately after the cursor, unless the tag is
---     self-closing (`<tag/>`, a distinct node type in both grammars below)
---     or a known HTML void element (br, img, ...), which never gets one.
---   * Auto-rename: editing an already-paired tag's name live-syncs the
---     matching tag (either direction) to keep both names identical.
---
--- Scope-down: covers HTML-style `tag_name` nodes (html, and vue's
--- HTML-derived template grammar) and JSX `identifier` nodes
--- (javascript/typescript with jsx, tsx); the two tag-pair shapes actually
--- used in this repo's stack. No Blade component-tag support: blade.nvim's
--- grammar doesn't model Blade directives as HTML-style open/close tag
--- pairs, so there's no equivalent node structure to hook here.
+-- Native auto-close/auto-rename of HTML/JSX tags, replacing nvim-ts-autotag.
+-- Treesitter-driven via TextChangedI (the parser needs the just-typed char
+-- already in the buffer). Covers HTML/JSX tag-pair shapes only; Blade
+-- directives have no HTML-style open/close node pairs to hook.
 
 local VOID_ELEMENTS = {
   area = true,
@@ -34,13 +20,9 @@ local VOID_ELEMENTS = {
 }
 
 -- Tag-container node type -> { name_type = its name child's node type,
--- side = "open" | "close" }. The HTML grammar uses a *different* node type
--- for a closing tag whose name doesn't match its opener yet
--- (`erroneous_end_tag`, with name child `erroneous_end_tag_name`); exactly
--- the state that exists mid-edit while renaming either tag, so it has to be
--- handled the same as a well-formed `end_tag`, not ignored. JSX has no such
--- distinction: `jsx_closing_element` stays `jsx_closing_element` regardless
--- of whether its name currently matches.
+-- side = "open" | "close" }. HTML has `erroneous_end_tag` for a closing tag
+-- whose name doesn't yet match its opener (the mid-rename state) handled
+-- like a well-formed `end_tag`. JSX has no such distinction.
 local TAG_CONTAINERS = {
   start_tag = { name_type = "tag_name", side = "open" },
   end_tag = { name_type = "tag_name", side = "close" },
@@ -49,9 +31,8 @@ local TAG_CONTAINERS = {
   jsx_closing_element = { name_type = "identifier", side = "close" },
 }
 
--- Open-container node type -> the set of closing-container types that
--- count as "already matched" (searched for among the parent element's
--- children), and the reverse, close -> open, for the other direction.
+-- Open-container node type -> closing types counting as "already matched",
+-- and the reverse for the other direction.
 local MATCHING_CLOSE_TYPES = {
   start_tag = { end_tag = true, erroneous_end_tag = true },
   jsx_opening_element = { jsx_closing_element = true },
@@ -62,9 +43,7 @@ local MATCHING_OPEN_TYPES = {
   jsx_closing_element = { jsx_opening_element = true },
 }
 
--- Re-entrancy guard: both functions below edit the buffer, which
--- re-triggers TextChangedI synchronously: this stops that from recursing
--- into itself instead of just seeing its own edit as already-settled state.
+-- Re-entrancy guard: these edits re-trigger TextChangedI synchronously.
 local applying = false
 
 --- Returns `tag_node`'s direct child of type `name_type`, or nil.
@@ -80,9 +59,8 @@ local function name_child(tag_node, name_type)
   return nil
 end
 
---- If the cursor sits right after a '>' that just completed a non-self-closing
---- opening tag with no existing matching close tag, inserts the closing tag
---- right after the cursor without moving it.
+--- If the cursor is right after a '>' that just completed a non-self-closing
+--- opening tag with no matching close tag, insert the close tag without moving.
 ---@param buf integer
 ---@param win integer
 local function maybe_close_tag(buf, win)
@@ -115,8 +93,7 @@ local function maybe_close_tag(buf, win)
     return
   end
 
-  -- The '>' just typed has to be THIS tag's own closing '>', not some
-  -- other one inside an already-complete tag (e.g. an attribute value).
+  -- Must be THIS tag's own closing '>', not one inside an attribute value.
   local _, _, erow, ecol = tag_node:range()
   if erow ~= row or ecol ~= col then
     return
@@ -147,8 +124,8 @@ local function maybe_close_tag(buf, win)
   applying = false
 end
 
---- If the cursor sits inside a tag name that has a matching pair (open<->close)
---- and the two names have drifted apart, rewrites the *other* one to match.
+--- If the cursor is inside a tag name whose paired tag's name has drifted,
+--- rewrites the other one to match.
 ---@param buf integer
 ---@param win integer
 local function maybe_sync_tag_name(buf, win)
@@ -201,9 +178,8 @@ local function maybe_sync_tag_name(buf, win)
   local osrow, oscol, oerow, oecol = other_name:range()
   applying = true
   vim.api.nvim_buf_set_text(buf, osrow, oscol, oerow, oecol, { this_text })
-  -- Keep the cursor anchored to what's actively being typed when the tag
-  -- just rewritten sits on the same line and before the cursor (editing the
-  -- closing tag while the earlier opening tag gets updated to match).
+  -- Keep the cursor anchored to the tag being typed when the rewritten tag
+  -- sits before it on the same line.
   if osrow == row and oscol < col then
     local delta = #this_text - (oecol - oscol)
     vim.api.nvim_win_set_cursor(win, { row + 1, col + delta })

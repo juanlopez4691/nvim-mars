@@ -1,13 +1,9 @@
--- Small editing quality-of-life autocmds: flash-highlight yanked text,
--- and restore the cursor to its
--- last-known position when reopening a previously-edited file. Both are
--- Neovim's own documented recipes (`:help lua-highlight`, `:help '"`) and
--- need no plugin.
+-- Small editing quality-of-life autocmds, both Neovim's own documented
+-- recipes (:help lua-highlight, :help '"'): flash-highlight yanked text
+-- and restore the cursor to its last position when reopening a file.
 
 local group = vim.api.nvim_create_augroup("mars_qol", { clear = true })
 
--- Briefly flash-highlight the yanked region after any yank/delete-into-
--- register operation, so it's visually obvious what was just grabbed.
 vim.api.nvim_create_autocmd("TextYankPost", {
   group = group,
   desc = "Flash-highlight the yanked text region",
@@ -16,10 +12,8 @@ vim.api.nvim_create_autocmd("TextYankPost", {
   end,
 })
 
--- Jump to the last-known cursor position (the `'"` mark) when reopening a
--- previously-edited file, if that position is still within the buffer.
--- Skipped for commit-message buffers, matching the reference config, since
--- git always opens those at line 1 intentionally.
+-- Restore the cursor to the `'"` mark if it's still within the buffer.
+-- Skipped for commit-message buffers, which git always opens at line 1.
 vim.api.nvim_create_autocmd("BufReadPost", {
   group = group,
   desc = "Restore cursor to last-known position on reopen",

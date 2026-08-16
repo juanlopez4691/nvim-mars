@@ -1,15 +1,12 @@
 -- Editor options. Folding (foldmethod/foldexpr/foldlevel) belongs to the
--- treesitter/LSP folding setup, not here. completeopt belongs to the
--- native completion setup.
+-- treesitter/LSP folding setup; completeopt to the native completion setup.
 
--- No reliable way to detect a terminal's font from Neovim; this is a
--- manual opt-in. Set to true if you have a Nerd Font installed; UI code
--- that wants file-type/git/diagnostic glyphs reads this instead of
--- re-detecting per module.
+-- No reliable way to detect a terminal's font; manual opt-in. UI code that
+-- wants glyphs reads this at point of use.
 vim.g.have_nerd_font = false
 
--- Floating-window border style ("rounded", "single", "solid", "none").
--- Override in lua/mars/local.lua and call require("mars.ui.borders").setup().
+-- Floating-window border style. Override in lua/mars/local.lua and call
+-- require("mars.ui.borders").setup().
 vim.g.mars_border_style = "rounded"
 
 local opt = vim.opt
@@ -32,13 +29,9 @@ opt.grepformat = "%f:%l:%c:%m"
 
 -- UI
 opt.number = true -- relativenumber is toggled dynamically based on mode/window focus
--- Auto-sized between 1 and 2 columns rather than a fixed single column:
--- with just one, a gitsigns hunk marker and a diagnostic sign on the same
--- line compete for that one slot and only the higher-priority one renders,
--- silently hiding whichever loses. "auto" (not "yes:2") keeps the gutter
--- at 1 column, as narrow as a fixed single column already was, on any
--- screen where nothing's currently double-stacked, only widening to 2 when
--- a visible line actually needs both at once.
+-- "auto:1-2" keeps the gutter at 1 column unless a line needs both a
+-- gitsigns marker and a diagnostic sign at once; with one fixed slot they
+-- compete and the lower-priority one silently disappears.
 opt.signcolumn = "auto:1-2"
 opt.termguicolors = true
 opt.laststatus = 3
@@ -66,9 +59,8 @@ opt.sidescrolloff = 8
 opt.smoothscroll = true
 opt.mouse = "a"
 opt.confirm = true
--- Global fallback border for any float that doesn't set its own (e.g. LSP
--- hover/signature-help, vim.ui.select); see vim.lsp.util.open_floating_preview,
--- which falls back to this option when no explicit border is passed.
+-- Global fallback border for floats that don't set their own (LSP hover/
+-- signature-help, vim.ui.select); see vim.lsp.util.open_floating_preview.
 opt.winborder = "rounded"
 
 -- Splits
@@ -102,10 +94,8 @@ vim.g.loaded_perl_provider = 0
 -- Fix markdown indentation settings
 vim.g.markdown_recommended_style = 0
 
--- Auto-reload when a file changes on disk. `checktime` redraws any buffers
--- whose underlying file was modified externally; when multiple events fire
--- close together (e.g. BufEnter then FocusGained), the 300ms timer ensures
--- we only run one reload pass instead of N.
+-- Auto-reload on external change. When several events fire close together
+-- (BufEnter then FocusGained), the 300ms timer runs one reload pass, not N.
 local checktime_timer = nil
 vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained", "TermLeave", "TermClose" }, {
   group = vim.api.nvim_create_augroup("mars_checktime", {}),
@@ -115,7 +105,6 @@ vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained", "TermLeave", "TermClose
     end
     checktime_timer = vim.defer_fn(function()
       checktime_timer = nil
-      -- Confirm before reloading if the buffer has unsaved changes
       if vim.bo.modified then
         local choice = vim.fn.confirm("File changed on disk. Reload?", "&Yes\n&No", 2)
         if choice == 1 then

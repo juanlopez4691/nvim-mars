@@ -1,11 +1,7 @@
--- Native indent guides: a vertical guide character at each indentation
--- level for the visible window range, plus a distinct highlight for the
--- guide marking the cursor's current Treesitter scope. Rendered with
--- overlay extmarks (`virt_text_win_col`) the same way
--- `lua/mars/ui/patterns.lua` uses extmarks, scoped to the visible line
--- range, and debounced so bursts of edits/movement collapse into a single
--- redraw. Skips floats/terminals/quickfix/etc. the same way
--- `lua/mars/core/lines.lua` detects special buffers.
+-- Native indent guides: a vertical guide at each indentation level over the
+-- visible window range, plus a distinct highlight on the guide marking the
+-- cursor's Treesitter scope. Overlay extmarks, debounced; skips
+-- floats/terminals/quickfix/etc.
 
 local M = {}
 
@@ -16,18 +12,15 @@ local group = vim.api.nvim_create_augroup("mars_indent", { clear = true })
 local max_bytes = 1024 * 1024
 local debounce_ms = 100
 
--- Off-screen lines of context fetched around the visible range so a blank
--- line at its edge can still infer its guide depth from the nearest
--- non-blank neighbour, without scanning the whole buffer.
+-- Lines fetched around the visible range so a blank line at its edge can
+-- still infer its guide depth from the nearest non-blank neighbour.
 local context_pad = 50
 
--- Hard cap on guide columns drawn per line; guards against a pathological
--- line (e.g. in a minified file) producing an unbounded number of
--- extmarks.
+-- Cap on guides drawn per line; guards against pathological (e.g. minified)
+-- lines producing an unbounded number of extmarks.
 local max_levels = 64
 
---- Buftypes that mark a window as plugin UI / special-purpose, never worth
---- drawing guides in. Mirrors `lua/mars/core/lines.lua`.
+--- Buftypes that mark a window as plugin UI, never worth drawing guides in.
 local UI_BUFTYPES = {
   help = true,
   nofile = true,
@@ -40,20 +33,16 @@ local UI_BUFTYPES = {
 --- generation is still the latest requested for that window.
 local pending = {} ---@type table<integer, integer>
 
---- (Re)defines Mars's indent-guide highlight groups: a dim colour for
---- ordinary guides, and a brighter one for the guide marking the cursor's
---- current Treesitter scope. Reapplied on `ColorScheme` since built-in
---- colorschemes clear all highlight groups when they load (same pattern as
---- `lua/mars/ui/colorscheme.lua`).
+--- (Re)defines the indent-guide highlights: a dim group for ordinary
+--- guides, a brighter one for the cursor's Treesitter scope. Reapplied on
+--- ColorScheme since built-in colorschemes clear all highlight groups.
 local function apply_highlights()
   vim.api.nvim_set_hl(0, "MarsIndentGuide", { link = "Comment" })
   vim.api.nvim_set_hl(0, "MarsIndentGuideScope", { link = "CursorLineNr" })
 end
 
---- Indentation level of a single line: its leading whitespace's display
---- width divided by `shiftwidth`, rounded down. Blank (or whitespace-only)
---- lines return nil; callers resolve their level from surrounding context
---- instead, see `resolve_levels`.
+--- Indent level of a line: leading whitespace display width divided by
+--- shiftwidth, rounded down. Blank lines return nil.
 ---@param line string
 ---@param shiftwidth integer
 ---@return integer?
@@ -65,12 +54,10 @@ local function line_level(line, shiftwidth)
   return math.floor(vim.fn.strdisplaywidth(leading) / shiftwidth)
 end
 
---- Indent level for every line in `[first, last)` (0-indexed, exclusive).
---- A blank line takes the smaller of its nearest non-blank neighbours'
---- levels, so a blank line inside a block still shows guides through it,
---- but never deeper than either side actually reaches, falling back to
---- a level of 0 if no non-blank neighbour is found within `context_pad`
---- lines.
+--- Indent level per line in `[first, last)`. A blank line takes the smaller
+--- of its nearest non-blank neighbours' levels, so guides continue through
+--- a blank line without exceeding either side; 0 if no neighbour is found
+--- within `context_pad` lines.
 ---@param bufnr integer
 ---@param first integer
 ---@param last integer
@@ -112,12 +99,9 @@ local function resolve_levels(bufnr, first, last, shiftwidth)
   return levels
 end
 
---- The current cursor's enclosing Treesitter scope: the nearest ancestor
---- of the node at `(row, col)` (including that node itself) whose range
---- spans more than one line. A generic, language-agnostic stand-in for a
---- "scope": no per-language query, just the first multi-line container.
---- Returns nil if the buffer has no attached parser, or no node at the
---- position spans multiple lines (e.g. an empty buffer).
+--- Nearest ancestor of the node at `(row, col)` (itself included) whose
+--- range spans more than one line: a generic, language-agnostic scope.
+--- nil if no parser is attached or no multi-line node exists.
 ---@param bufnr integer
 ---@param row integer 0-indexed
 ---@param col integer 0-indexed
@@ -134,9 +118,8 @@ local function current_scope(bufnr, row, col)
   local current = node
   while current do
     local srow, _, erow, ecol = current:range()
-    -- A node ending at column 0 of `erow` doesn't actually reach into that
-    -- row's text (common for blocks whose closing token is followed by a
-    -- newline captured in the range); treat its last real row as erow-1.
+    -- A node ending at column 0 of `erow` doesn't reach into that row's
+    -- text (closing token followed by a newline captured in the range).
     if ecol == 0 then
       erow = erow - 1
     end
@@ -148,9 +131,8 @@ local function current_scope(bufnr, row, col)
   return nil
 end
 
---- Screen column of the guide that marks scope `[srow, erow]`'s body: the
---- indent level of the first non-blank line inside the scope, or, if the
---- whole body is blank, one level deeper than the opening line itself.
+--- Guide column for a scope's body: the first non-blank line's level, or
+--- one level past the opening line if the whole body is blank.
 ---@param bufnr integer
 ---@param srow integer 0-indexed
 ---@param erow integer 0-indexed, inclusive
@@ -171,9 +153,8 @@ local function scope_column(bufnr, srow, erow, shiftwidth)
   return open_level * shiftwidth
 end
 
---- Whether `bufnr`/`winid` is worth drawing guides in: a plain,
---- non-floating window (mirrors `lua/mars/core/lines.lua`'s
---- `is_normal_window`) over a buffer under the size cap.
+--- Whether a plain, non-floating window over a sub-cap buffer is worth
+--- drawing guides in.
 ---@param bufnr integer
 ---@param winid integer
 ---@return boolean
@@ -228,9 +209,8 @@ function M.refresh(winid)
     scope_col = scope_column(bufnr, srow, erow, shiftwidth)
   end
 
-  -- Read the Nerd Font flag here, at draw time, rather than memoizing it;
-  -- `lua/mars/local.lua` (where users actually set it) loads after every
-  -- ui/ module, so an upvalue would freeze to the plain-text fallback.
+  -- Read the Nerd Font flag at draw time: local.lua (where users set it)
+  -- loads after this module, so an upvalue would freeze to the fallback.
   local guide_char = vim.g.have_nerd_font and "│" or "|"
 
   for row = first, last - 1 do

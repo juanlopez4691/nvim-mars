@@ -1,37 +1,22 @@
--- Auto-highlights every occurrence of the symbol under the cursor via LSP
--- (`textDocument/documentHighlight`), the exact recipe documented at
--- `:help vim.lsp.buf.document_highlight()`:
+-- Auto-highlights the symbol under the cursor via
+-- `textDocument/documentHighlight` (the recipe at :help
+-- vim.lsp.buf.document_highlight()), wired per-buffer on LspAttach and
+-- torn down on LspDetach once no remaining client still supports it.
 --
---   autocmd CursorHold  <buffer> lua vim.lsp.buf.document_highlight()
---   autocmd CursorHoldI <buffer> lua vim.lsp.buf.document_highlight()
---   autocmd CursorMoved <buffer> lua vim.lsp.buf.clear_references()
---
--- Wired per-buffer on `LspAttach`, gated on the attaching client actually
--- supporting the method, and torn down on `LspDetach` once no remaining
--- client on that buffer still supports it (a buffer can have more than one
--- attached client).
---
--- `]r`/`[r` jump between the highlighted occurrences, following this repo's
--- `]h`/`[h` (gitsigns hunk) bracket-motion convention rather than the
--- literal `]]`/`[[` suggested upstream (snacks.nvim's "words"): those two
--- are Neovim's own native section-motion (`:help ]]`) and remapping them
--- globally would clobber that everywhere, including buffers with no LSP
--- highlight support.
+-- `]r`/`[r` jump between highlights; the literal `]]`/`[[` from the
+-- upstream recipe is avoided because those are Neovim's native section
+-- motions (:help ]]).
 
 local method = vim.lsp.protocol.Methods.textDocument_documentHighlight
 
 local augroup = vim.api.nvim_create_augroup("mars_lsp_references", { clear = true })
 
---- The fixed namespace `vim.lsp.util` places document-highlight extmarks
---- under (see its `buf_highlight_references`/`buf_clear_references`).
---- `nvim_create_namespace` returns the same id for a given name every time,
---- so this resolves to that same namespace without needing `vim.lsp.util`
---- to expose it itself.
+--- The namespace `vim.lsp.util` places document-highlight extmarks under;
+--- `nvim_create_namespace` returns the same id for a name every time.
 local reference_ns = vim.api.nvim_create_namespace("nvim.lsp.references")
 
---- Builds a `]r`/`[r` handler that jumps the cursor to the next/previous
---- highlighted reference in the current buffer, wrapping around per
---- 'wrapscan' the same way native `]]`/`[[` do.
+--- Builds a `]r`/`[r` handler jumping to the next/previous highlighted
+--- reference, wrapping per 'wrapscan'.
 ---@param direction "next"|"prev"
 ---@return fun()
 local function jump_reference(direction)
@@ -77,8 +62,7 @@ local function jump_reference(direction)
   end
 end
 
---- Sets up the CursorHold-driven highlight/clear autocmds and the `]r`/`[r`
---- jump keymaps for a single buffer.
+--- Wires up the highlight/clear autocmds and `]r`/`[r` keymaps for one buffer.
 ---@param bufnr integer
 local function attach(bufnr)
   if vim.b[bufnr].mars_lsp_references_attached then
@@ -108,8 +92,8 @@ local function attach(bufnr)
   vim.keymap.set("n", "[r", jump_reference("prev"), { buffer = bufnr, silent = true, desc = "Previous Reference" })
 end
 
---- Tears down the autocmds/keymaps/highlights set up by `attach`, once no
---- remaining client on the buffer still supports document highlight.
+--- Tears down the autocmds/keymaps/highlights from `attach`, once no
+--- remaining client on the buffer supports document highlight.
 ---@param bufnr integer
 local function detach(bufnr)
   if not vim.b[bufnr].mars_lsp_references_attached then

@@ -1,5 +1,4 @@
--- `:checkhealth mars`; see :help health-dev for the require("mars.health")
--- discovery convention this file implements.
+-- `:checkhealth mars`
 
 local M = {}
 

@@ -1,5 +1,5 @@
 -- which-key.nvim: leader-key hint popup and group labels. No native API
--- reproduces this (see AGENTS.md's approved exception list).
+-- reproduces this.
 
 require("mars.pack").add({
   { src = "https://github.com/folke/which-key.nvim" },
@@ -8,9 +8,8 @@ require("mars.pack").add({
 require("mars.pack").on({
   event = "VimEnter",
   config = function()
-    -- The default `icons.keys` table renders special keys (Ctrl, CR, Esc,
-    -- F1..F12, ...) as Nerd Font glyphs. Fall back to plain text when the
-    -- user hasn't opted into a Nerd Font.
+    -- The default `icons.keys` renders special keys as Nerd Font glyphs;
+    -- fall back to plain text when the user hasn't opted into a Nerd Font.
     local key_icons
     if not vim.g.have_nerd_font then
       key_icons = {
@@ -47,17 +46,13 @@ require("mars.pack").on({
 
     require("which-key").setup({
       icons = { keys = key_icons },
-      -- Vertical list instead of the default multi-column grid: cap the
-      -- popup at one readable-width column, then force exactly one column
-      -- by setting layout.width.min above any width that column could
-      -- realistically take (which-key clamps it back down to the popup's
-      -- own width (see its layout.lua), so this always resolves to
-      -- "exactly as wide as the popup", never more than one fits).
+      -- Force a single-column list: layout.width.min (999) sits above any
+      -- width the popup could take, and which-key clamps it back down to the
+      -- popup's own width, so it resolves to "exactly as wide as the popup".
       win = {
         width = { min = 40, max = 60 },
-        -- which-key's own default (win.lua) is col=0 (flush left); math.huge
-        -- mirrors its *own* row=math.huge default trick; Layout.dim clamps
-        -- it down to the largest valid position, i.e. flush right instead.
+        -- col=math.huge mirrors which-key's own row=math.huge trick:
+        -- Layout.dim clamps it to the largest valid position (flush right).
         col = math.huge,
         border = require("mars.ui.borders").style(),
       },
@@ -65,8 +60,8 @@ require("mars.pack").on({
     })
 
     -- Leader-key group labels. Keymaps land later alongside the features
-    -- that use them; which-key shows an empty entry for a group with no
-    -- mappings yet, which is expected here.
+    -- that use them; a group with no mappings yet shows an empty entry,
+    -- which is expected here.
     ---@param lhs string
     ---@param name string
     ---@return wk.Spec

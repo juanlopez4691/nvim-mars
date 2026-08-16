@@ -1,28 +1,14 @@
--- DAP keymaps: F-key and <leader>d* bindings that drive an nvim-dap session
--- once one is running (see lua/mars/plugins/dap.lua, NEO-44, for the stack
--- itself: nvim-dap/nvim-dap-ui/nvim-dap-virtual-text/mason-nvim-dap,
--- lazy-loaded on VimEnter).
--- The mnemonic-only extras (run with args, REPL, session, manual dap-ui
--- toggle, widget hover) have no F-key equivalent; each action is bound to a
--- `<leader>d*` mnemonic and one or more F-key forms.
--- `<leader>d` is already reserved as the "Debug" which-key group in
--- lua/mars/plugins/which-key.lua.
+-- DAP keymaps driving nvim-dap (see lua/mars/plugins/dap.lua). `<leader>d`
+-- is the "Debug" which-key group
+-- (lua/mars/plugins/which-key.lua).
 --
--- Shifted/Ctrl F-key variants: many terminals don't report Shift/Ctrl held
--- with a function key as `<S-F5>`/`<C-F5>`; they send a distinct extended
--- keycode instead, following a long-standing xterm/tmux convention:
--- Shift-Fn arrives as Fn+12 (F13..F24) and Ctrl-Fn as Fn+24 (F25..F36).
--- These extended codes surface as `<F17>` for Shift-F5, `<F21>`
--- for Shift-F9, `<F23>` for Shift-F11, `<F18>` for Shift-F6, `<F29>` for
--- Ctrl-F5, instead of binding `<S-F5>`/`<C-F5>` directly. A terminal or
--- multiplexer that *does* forward the modifier notation natively would get
--- no keymap at all from the extended keycode alone, so every shifted/ctrl
--- action below binds both forms; whichever one a given terminal reports,
--- the keymap fires.
+-- Shift/Ctrl F-key variants: terminals typically send Fn+12 (Shift) and
+-- Fn+24 (Ctrl) extended keycodes rather than `<S-Fn>`/`<C-Fn>`, so each
+-- action binds both forms; whichever a given terminal reports, the keymap
+-- fires.
 
---- Pcall-guards `require(mod)` and returns the module, or nil (with a
---- warning) when nvim-dap isn't available (e.g. not finished loading yet,
---- or the plugin failed to install).
+--- Pcall-guards `require(mod)`, returning nil (with a warning) when
+--- nvim-dap isn't available.
 ---@param mod string
 ---@return table?
 local function require_dap(mod)
@@ -58,8 +44,7 @@ local function safe_dapui_call(fn_name)
   end
 end
 
---- Prompts for a breakpoint condition and sets a conditional breakpoint at
---- the current line. Pcall-guarded the same way as `safe_dap_call`.
+--- Prompts for a breakpoint condition and sets it at the current line.
 ---@return nil
 local function set_conditional_breakpoint()
   local dap = require_dap("dap")
@@ -68,21 +53,17 @@ local function set_conditional_breakpoint()
   end
 end
 
---- Closes dap-ui, then terminates the current debug session. Each half
---- goes through its own safe wrapper, so a missing/broken dap-ui doesn't
---- stop the `dap.terminate()` half from still running.
+--- Closes dap-ui, then terminates the session; each half is independently
+--- safe-wrapped so a broken dap-ui can't stop `dap.terminate()`.
 ---@return nil
 local function terminate()
   safe_dapui_call("close")()
   safe_dap_call("terminate")()
 end
 
---- Builds the `before` hook `dap.continue()` runs before launching,
---- prompting for launch arguments (pre-filled with whatever the active
---- configuration already has). A `get_args`-style hook, minus the
---- java-specific string-args branch: mars has no java debug adapter
---- configured, so `dap.utils.splitstr`'s table return is always correct
---- here.
+--- `before` hook for `dap.continue()`, prompting for launch args
+--- pre-filled from the config. A `get_args`-style hook, minus the
+--- java-specific string-args branch (no java adapter here).
 ---@param config table
 ---@return table
 local function get_args(config)
@@ -97,8 +78,7 @@ local function get_args(config)
   return config
 end
 
---- Continues (or starts) the debug session after prompting for launch
---- arguments via `get_args`. Pcall-guarded the same way as `safe_dap_call`.
+--- Continues (or starts) the session after prompting for args.
 ---@return nil
 local function run_with_args()
   local dap = require_dap("dap")
@@ -107,9 +87,7 @@ local function run_with_args()
   end
 end
 
---- Toggles nvim-dap's REPL window. Pcall-guarded the same way as
---- `safe_dap_call`, but reaches into `dap.repl` since `repl.toggle` isn't a
---- top-level `dap.*` function.
+--- Toggles nvim-dap's REPL window; `repl.toggle` isn't a top-level `dap.*`.
 ---@return nil
 local function toggle_repl()
   local dap = require_dap("dap")
@@ -118,9 +96,7 @@ local function toggle_repl()
   end
 end
 
---- Shows a hover widget with debug info (scopes/variables) for the
---- expression under the cursor, via nvim-dap's built-in widgets module.
---- Pcall-guarded the same way as `safe_dap_call`.
+--- Hover widget with debug info for the expression under the cursor.
 ---@return nil
 local function widget_hover()
   local widgets = require_dap("dap.ui.widgets")
@@ -130,10 +106,7 @@ local function widget_hover()
 end
 
 --- Binds normal-mode `rhs` to every lhs in `lhs_list` with the same
---- description, used below so one action reachable via its `<leader>d*`
---- mnemonic and one or more F-key forms (plain, extended-numeric, and/or
---- `<S-Fn>`/`<C-Fn>`) doesn't repeat the `vim.keymap.set` boilerplate per
---- key, mirroring the multi-lhs pattern in lua/mars/core/splits.lua.
+--- description, so one action's multiple key forms share one keymap call.
 ---@param lhs_list string[]
 ---@param rhs fun()
 ---@param desc string

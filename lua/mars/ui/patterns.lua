@@ -1,9 +1,7 @@
 -- Native pattern highlighting: comment keywords (TODO/FIXME/HACK/NOTE/WARN/
--- PERF) and hex colour literals shown with their own colour as background.
--- Driven by autocmds rather than 'matchadd' (window-local, doesn't survive
--- window changes) and scoped to the current window's visible line range so
--- large files stay cheap; a generation counter debounces bursts of edits
--- into a single scan.
+-- PERF) and hex colour literals shown in their own colour. Autocmd-driven
+-- ('matchadd' is window-local and doesn't survive window changes), scoped
+-- to the visible line range, debounced.
 
 local M = {}
 
@@ -13,7 +11,6 @@ local ns = vim.api.nvim_create_namespace("mars_patterns")
 local max_bytes = 1024 * 1024
 local debounce_ms = 100
 
--- Prefer existing built-in groups over inventing new ones.
 local keyword_groups = {
   TODO = "Todo",
   FIXME = "DiagnosticError",
@@ -23,9 +20,8 @@ local keyword_groups = {
   PERF = "DiagnosticHint",
 }
 
--- Per-colour highlight groups can't be predeclared, so this module creates
--- one dynamically per distinct hex value, caching it so each is created at
--- most once.
+-- Per-colour highlight groups can't be predeclared, so one is created
+-- dynamically per distinct hex value and cached.
 local hex_group_cache = {} ---@type table<string, string>
 
 --- Pending debounce generation per buffer; a scan only runs if its
@@ -42,8 +38,8 @@ local function linearize(channel)
   return ((channel + 0.055) / 1.055) ^ 2.4
 end
 
---- Picks a readable foreground colour for a given 6-digit hex background by
---- computing its relative luminance rather than assuming light or dark.
+--- Readable foreground (black/white) for a hex background, by computing
+--- relative luminance rather than assuming light or dark.
 ---@param hex string 6-digit hex colour, lowercase, no leading '#'
 ---@return string
 local function readable_fg(hex)
@@ -226,10 +222,9 @@ local function is_eligible(bufnr)
   return size >= 0 and size <= max_bytes
 end
 
---- Rescans a buffer's currently visible region (or the whole buffer, if
---- it's not shown in any window). Ineligible-but-valid buffers are cleared
---- instead; a since-deleted buffer (e.g. wiped out during the debounce
---- window) is silently skipped rather than touched at all.
+--- Rescans a buffer's visible region (or the whole buffer, if it isn't
+--- shown in any window). Ineligible buffers are cleared instead; a
+--- since-deleted buffer is silently skipped.
 ---@param bufnr? integer defaults to the current buffer
 function M.refresh(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()

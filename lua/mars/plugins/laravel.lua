@@ -1,12 +1,9 @@
--- adalessa/laravel.nvim: Artisan/routes/make/resources pickers, an Artisan
--- Hub, a Command Center, and a resource-aware `gf` for Laravel projects (see
--- AGENTS.md's approved exception list).
+-- adalessa/laravel.nvim: Artisan/routes/make/resources pickers, a command
+-- center, and a resource-aware `gf` for Laravel projects.
 --
--- nui.nvim, plenary.nvim, and nvim-nio below are laravel.nvim's own hard
--- runtime dependencies (UI primitives, file scanning, and async I/O
--- respectively). They're pulled in solely to satisfy laravel.nvim's own
--- `require()`s, not a general-purpose approval to reach for them elsewhere
--- in this config.
+-- nui.nvim, plenary.nvim, and nvim-nio are laravel.nvim's own hard runtime
+-- dependencies (UI primitives, file scanning, async I/O), pulled in solely
+-- to satisfy its `require()`s.
 
 require("mars.pack").add({
   { src = "https://github.com/MunifTanjim/nui.nvim" },
@@ -15,18 +12,16 @@ require("mars.pack").add({
   { src = "https://github.com/adalessa/laravel.nvim" },
 })
 
---- Whether the current working directory is a Laravel project root. Mirrors
---- the check laravel.nvim's own environment boot does internally, so this
---- gate never disagrees with the plugin about whether it should be active.
+--- Whether the cwd is a Laravel project root. Mirrors laravel.nvim's own
+--- internal check, so this gate never disagrees with the plugin.
 ---@return boolean
 local function is_laravel_project()
   return vim.fn.filereadable("artisan") == 1
 end
 
---- Picks the "sail" environment when the project vendors Sail, so artisan
---- (and composer/npm/yarn) commands route through `vendor/bin/sail`. Every
---- other setup (Herd, Valet, native PHP, ...) falls through to the plugin's
---- own "local" default, running commands directly.
+--- Picks the "sail" environment when the project vendors Sail, routing
+--- artisan/composer/npm/yarn through `vendor/bin/sail`; everything else uses
+--- the plugin's "local" default.
 ---@return string
 local function detect_environment()
   if vim.fn.filereadable("vendor/bin/sail") == 1 then
@@ -37,9 +32,7 @@ end
 
 local laravel_loaded = false
 
---- Runs laravel.nvim's setup exactly once. Safe to call repeatedly; the
---- FileType trigger below and every keymap call this before touching
---- `_G.Laravel`, so whichever fires first does the real work.
+--- Runs laravel.nvim's setup exactly once.
 local function setup_laravel()
   if laravel_loaded then
     return
@@ -59,12 +52,10 @@ local function setup_laravel()
   })
 end
 
--- `mars.pack.on()`'s triggers fire at most once, unconditionally; fine for
--- a plugin that always wants loading, but wrong here: a `php`/`blade`
--- buffer opened outside a Laravel project must not burn the only trigger.
--- The project check happens inside `config` instead; if it fails here, the
--- keymaps below still load laravel.nvim on demand the first time one is
--- used inside an actual Laravel project later in the same session.
+-- `mars.pack.on()` fires its trigger at most once, unconditionally; a
+-- php/blade buffer opened outside a Laravel project must not burn it, so the
+-- project check lives inside `config`. If it fails, the keymaps below still
+-- load laravel.nvim on demand the first time one runs in a real project.
 require("mars.pack").on({
   ft = { "php", "blade" },
   config = function()
@@ -74,9 +65,8 @@ require("mars.pack").on({
   end,
 })
 
---- Builds a picker keymap callback: loads laravel.nvim on demand (in case
---- no `php`/`blade` buffer has triggered it yet) and runs the named picker,
---- or notifies instead of erroring when this isn't a Laravel project.
+--- Loads laravel.nvim on demand and runs the named picker, or notifies
+--- instead of erroring when this isn't a Laravel project.
 ---@param name string
 ---@return fun()
 local function picker(name)
@@ -91,9 +81,8 @@ local function picker(name)
   end
 end
 
---- Builds a keymap callback for a named Laravel command entry point
---- (Actions, Hub, Command Center, ...), with the same on-demand load and
---- non-Laravel guard as `picker()`.
+--- Same on-demand load and non-Laravel guard as `picker()`, for a named
+--- Laravel command entry point (Actions, Hub, Command Center, ...).
 ---@param name string
 ---@return fun()
 local function command(name)
@@ -119,12 +108,9 @@ vim.keymap.set("n", "<leader>lu", command("hub"), { desc = "Hub" })
 vim.keymap.set("n", "<leader>lp", command("command_center"), { desc = "Command Center" })
 vim.keymap.set("n", "<c-g>", command("view:finder"), { desc = "View Finder" })
 
--- Defers to laravel.nvim's resource-aware jump (route()/view()/config()/
--- env()/Inertia::render() strings under the cursor) when this is a Laravel
--- project and the cursor is actually on one. Otherwise this is a plain,
--- non-recursive expr mapping that returns the literal keys "gf", so it
--- falls through to Neovim's built-in `gf` exactly as if this mapping
--- didn't exist.
+-- Falls through to a literal "gf" when this isn't a Laravel project or the
+-- cursor isn't on a resource, so Neovim's built-in `gf` runs exactly as if
+-- this mapping didn't exist.
 vim.keymap.set("n", "gf", function()
   if not is_laravel_project() then
     return "gf"

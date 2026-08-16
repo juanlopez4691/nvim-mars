@@ -1,7 +1,6 @@
 -- Native winbar: relative filename, modified indicator, and a per-buffer
 -- diagnostic summary. Suppressed on floating windows and non-file buffers
--- (help, quickfix, terminal, netrw, anything with a non-empty 'buftype')
--- since a winbar on those looks broken rather than useful.
+-- (help, quickfix, terminal, netrw), where a winbar looks broken.
 
 local M = {}
 
@@ -21,10 +20,8 @@ local plain_icons = {
   [severity.HINT] = "H:",
 }
 
---- Picks the icon table for the current buffer/render. Read on every call
---- rather than cached, since `vim.g.have_nerd_font` is a user opt-in that
---- may be set after this module loads (`lua/mars/local.lua` loads last) or
---- toggled at runtime.
+--- Icon table for the current render, read each call since the nerd-font
+--- flag may be set after this module loads or toggled at runtime.
 ---@return table<integer, string>
 local function diagnostic_icons()
   return vim.g.have_nerd_font and nerd_font_icons or plain_icons
@@ -47,9 +44,9 @@ local function is_floating(winid)
   return vim.api.nvim_win_get_config(winid).relative ~= ""
 end
 
---- Whether a buffer is a plain, on-disk-style file buffer worth labeling.
---- Excludes help/quickfix/terminal/prompt buffers (non-empty 'buftype')
---- and netrw listings, which keep 'buftype' empty but set 'filetype'.
+--- Whether a buffer is a plain file buffer worth labeling: excludes
+--- non-empty 'buftype' buffers and netrw listings, which keep 'buftype'
+--- empty but set 'filetype'.
 ---@param bufnr integer
 ---@return boolean
 local function is_file_buffer(bufnr)

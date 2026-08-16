@@ -1,6 +1,5 @@
--- Native autopairs: auto-closes brackets and quotes in insert mode,
--- and backspaces both sides of a freshly-inserted pair at once. Replaces
--- mini.pairs with a first-party InsertCharPre-based implementation.
+-- Native autopairs: auto-closes brackets/quotes on insert, and backspaces
+-- both sides of a freshly-inserted pair.
 
 local M = {}
 
@@ -43,11 +42,9 @@ vim.api.nvim_create_autocmd("InsertCharPre", {
   end,
 })
 
--- Backspace handler: when the cursor sits between a paired open/close
--- character (e.g. `(|)`), delete both at once instead of just the open
--- character.  InsertCharPre is *not* fired for backspace in practice, so
--- this handler races ahead of the actual backspace insert by deleting
--- the close char and then feeding <Ignore> to consume the backspace.
+-- Backspace between a freshly-inserted pair deletes both. InsertCharPre
+-- isn't fired for backspace, so race the real one: delete the close char
+-- and feed <Ignore> to swallow it.
 vim.api.nvim_create_autocmd("InsertCharPre", {
   group = augroup,
   callback = function()

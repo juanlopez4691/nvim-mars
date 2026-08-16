@@ -1,6 +1,5 @@
--- Activates every native LSP config under lsp/*.lua (see :help lsp-config).
--- Each server is configured declaratively in its own file; dropping one in is
--- all it takes to enable it, so this list never has to be maintained by hand.
+-- Activates every native LSP config under lsp/*.lua (see :help lsp-config);
+-- dropping a file in is all it takes to enable that server.
 
 local names = {}
 for _, file in ipairs(vim.api.nvim_get_runtime_file("lsp/*.lua", true)) do
@@ -9,8 +8,7 @@ end
 
 vim.lsp.enable(names)
 
--- Balanced sizing for LSP floating windows. Border style is read at
--- runtime from mars.ui.borders so local.lua overrides take effect.
+-- Border is read at runtime from mars.ui.borders so local.lua overrides apply.
 vim.lsp.handlers["textDocument/hover"] = function(err, result, ctx, config)
   vim.lsp.handlers.hover(
     err,
@@ -52,9 +50,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
   end,
 })
 
---- Jumps straight to a single LSP location, or sends more than one to the
---- quickfix list and opens it; the same single-vs-many split the native
---- `grr`/tagfunc fallback already uses elsewhere in this config.
+--- Jumps to a single location, or sends several to the quickfix list.
 ---@param locations lsp.Location[]|lsp.LocationLink[]?
 ---@param encoding "utf-8"|"utf-16"|"utf-32"
 local function open_locations(locations, encoding)
@@ -79,9 +75,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
       return
     end
 
-    -- `typescript.goToSourceDefinition` resolves through .d.ts declarations
-    -- back to the original source, unlike the generic `type_definition`
-    -- LSP method (which stops at the type's own declaration).
+    -- goToSourceDefinition resolves through .d.ts back to source, unlike
+    -- `type_definition` which stops at the type's own declaration.
     vim.keymap.set("n", "gD", function()
       local win = vim.api.nvim_get_current_win()
       local params = vim.lsp.util.make_position_params(win, client.offset_encoding)
@@ -95,9 +90,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
       end)
     end, { buffer = ev.buf, silent = true, desc = "Go to source definition" })
 
-    -- Files that reference/import the *current file*, distinct from (and
-    -- not covered by) the native `grr` mapping, which finds references to
-    -- the symbol under the cursor instead.
+    -- Files referencing the current file, distinct from `grr`, which finds
+    -- references to the symbol under the cursor.
     vim.keymap.set("n", "gR", function()
       client:exec_cmd({
         command = "typescript.findAllFileReferences",

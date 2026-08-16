@@ -4,9 +4,8 @@ local prepare_rename_method = vim.lsp.protocol.Methods.textDocument_prepareRenam
 
 local preview_ns = vim.api.nvim_create_namespace("mars_rename_preview")
 
---- Finds every word-boundary occurrence of `word` in `bufnr`, returning
---- { line, start_char, end_char } tables (0-indexed columns, end exclusive)
---- suitable for extmark positioning.
+--- Every word-boundary occurrence of `word` in `bufnr`, as
+--- { line, start_char, end_char } (0-indexed columns, end exclusive).
 ---@param bufnr integer
 ---@param word string
 ---@return table[]
@@ -31,9 +30,8 @@ local function find_occurrences(bufnr, word)
   return occurrences
 end
 
---- Extracts the symbol name at the cursor from a `textDocument/prepareRename`
---- result, falling back to `<cword>` when the range or placeholder isn't
---- available.
+--- Symbol name from a `textDocument/prepareRename` result, falling back
+--- to `<cword>` when the range or placeholder is missing.
 ---@param result table|nil
 ---@param bufnr integer
 ---@return string
@@ -63,8 +61,7 @@ local function current_word_from_result(result, bufnr)
   return vim.fn.expand("<cword>")
 end
 
---- Placeholder virtual text that shows `new_name` on top of every
---- `occurrence` position. Clears any prior preview first.
+--- Virtual text showing `new_name` over each `occurrence`; clears prior.
 ---@param bufnr integer
 ---@param occurrences table[]
 ---@param new_name string
@@ -85,11 +82,9 @@ local function show_preview(bufnr, occurrences, new_name)
   end
 end
 
---- Incremental, live-preview rename via LSP. On each keystroke in the
---- cmdline input, every word-boundary occurrence of the symbol in the
---- buffer is visually replaced by the text typed so far (extmark overlay).
---- Pressing Enter executes `vim.lsp.buf.rename()`; Esc (or an empty input)
---- cancels and clears the preview.
+--- Incremental live-preview rename: each cmdline keystroke overlays the
+--- new text over every occurrence; Enter runs `vim.lsp.buf.rename()`, Esc
+--- or an empty input cancels.
 function M.rename()
   local bufnr = vim.api.nvim_get_current_buf()
   local params = vim.lsp.util.make_position_params(0)
@@ -144,8 +139,8 @@ vim.api.nvim_create_user_command("MarsRename", function()
   M.rename()
 end, { desc = "Incremental rename with live preview" })
 
---- Renames `from` on disk, remapping any window showing that buffer to the
---- new path, then deletes the stale buffer.
+--- Renames `from` on disk, remaps any window showing it to the new path,
+--- then deletes the stale buffer.
 ---@param from string absolute path
 ---@param to string absolute path
 ---@return boolean ok
@@ -170,12 +165,10 @@ local function rename_on_disk(from, to)
   return true
 end
 
---- Notifies every attached LSP client of a file rename per the
---- `workspace/willRenameFiles`/`workspace/didRenameFiles` spec: clients
---- supporting the "will" request get a chance to return a WorkspaceEdit
---- (e.g. updating import paths) applied *before* the rename happens, then
---- the rename itself runs, then clients supporting the "did" method get a
---- fire-and-forget notification.
+--- Renames a file with LSP awareness per the `workspace/willRenameFiles`/
+--- `didRenameFiles` spec: "will" clients may return a WorkspaceEdit (e.g.
+--- updated imports) applied before the rename; "did" clients get a
+--- fire-and-forget notification after.
 ---@param from string absolute path
 ---@param to string absolute path
 local function rename_with_lsp(from, to)
@@ -202,9 +195,9 @@ local function rename_with_lsp(from, to)
   end
 end
 
---- Prompts for a new name for `opts.from` (defaulting to the current
---- buffer's file), then renames it with LSP awareness; the file-rename
---- counterpart to M.rename()'s symbol rename above.
+--- Prompts for a new name for `opts.from` (default: the current buffer's
+--- file), then renames it LSP-aware; the file-rename counterpart to
+--- M.rename()'s symbol rename.
 ---@param opts? { from?: string }
 function M.rename_file(opts)
   opts = opts or {}

@@ -1,38 +1,24 @@
--- PHP/Xdebug DAP launch configs (NEO-45), built on top of the debugging
--- stack wired up by lua/mars/plugins/dap.lua. Kept in its own file rather
--- than extending dap.lua directly: everything below is just table
--- assignments on the shared `dap` module, read lazily whenever a debug
--- session actually starts (not at require time), so it's safe to set
--- independently of dap.lua's own lazy `mars.pack.on()` setup.
+-- PHP/Xdebug DAP launch configs (NEO-45), on top of lua/mars/plugins/dap.lua.
+-- Everything here is table assignments on the shared `dap` module, read lazily
+-- when a session starts, so it's safe to set independently of dap.lua's lazy
+-- setup. Respects an existing .vscode/launch.json; if the project defines
+-- one, this module does nothing and lets that file win.
 --
--- Respects an explicit user override: if the project already defines its
--- own .vscode/launch.json, this module does nothing and lets that file win.
---
--- The actual wiring is deferred to VimEnter (via `mars.pack.on`, reused
--- here purely for its generic once-only event deferral; no `.add()` call:
--- nvim-dap is already registered by dap.lua). This isn't about lazy-
--- loading; it's required for correctness: `init.lua`'s `require_dir`
--- processes `lua/mars/plugins/*.lua` in sorted order, and
--- "dap-php.lua" < "dap.lua" byte-wise, so this file is `require()`-d
--- *before* dap.lua's own top-level `mars.pack.add()` call runs. Requiring
--- "dap" here at top level would fail with "module 'dap' not found". By
--- VimEnter, `require_dir` has fully finished regardless of that ordering,
--- so `require("dap")` is safe.
+-- Deferred to VimEnter via `mars.pack.on` (no `.add()`; dap.lua already
+-- registers nvim-dap). This is required for correctness, not lazy-loading:
+-- `require_dir` processes plugins/*.lua in sorted order and "dap-php.lua" <
+-- "dap.lua" byte-wise, so a top-level require("dap") here would fail with
+-- "module 'dap' not found"; by VimEnter require_dir has fully finished.
 
 if vim.fn.filereadable(".vscode/launch.json") == 1 then
   return
 end
 
 --- Wires `dap.adapters.php` to the Mason-installed `php-debug-adapter`
---- binary (see lua/mars/plugins/mason.lua's `ensure_installed` list).
---- Resolved via mason-registry's own install path rather than
---- `vim.fn.exepath`, so it works regardless of whether Mason's shim
---- directory is on PATH yet. Mirrors mason-nvim-dap's own default adapter
---- mapping (`mason-nvim-dap/mappings/adapters/php.lua`): an `executable`
---- adapter pointing directly at the installed wrapper script, which
---- already knows how to invoke Node internally. A no-op (with no
---- notification) if the package isn't known or installed yet; the next
---- successful Mason install leaves this correct on the next Neovim start.
+--- binary, resolved via mason-registry so it works regardless of whether
+--- Mason's shim dir is on PATH. Mirrors mason-nvim-dap's own default php
+--- mapping (an `executable` adapter at the wrapper script). No-op until the
+--- package is installed; a later successful Mason install fixes it next start.
 ---@param dap table The `dap` module.
 ---@return nil
 local function setup_adapter(dap)
@@ -59,11 +45,9 @@ require("mars.pack").on({
 
     setup_adapter(dap)
 
-    --- `dap.configurations.php`: two Xdebug "Listen for Xdebug" launch
-    --- configs. The Docker/Sail variant maps the container's project path
-    --- (`/var/www/html`, the standard Laravel Sail path) to the local
-    --- workspace; the local variant omits path mapping for PHP running
-    --- directly on the host.
+    --- Two Xdebug "Listen for Xdebug" launch configs: a Docker/Sail variant
+    --- mapping the container path `/var/www/html` to the workspace, and a
+    --- host-native variant with no path mapping.
     dap.configurations.php = {
       {
         type = "php",

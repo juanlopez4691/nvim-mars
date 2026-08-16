@@ -1,28 +1,24 @@
 -- mason.nvim: cross-platform installer for the external LSP servers,
--- formatters, linters, and debug adapters this config expects (see
--- AGENTS.md's approved exception list). Only mason.nvim itself is used;
--- no mason-lspconfig or mason-tool-installer; servers are wired up natively
--- via `vim.lsp.enable`, and the ensure-install below is a small first-party
--- stand-in for what mason-tool-installer would otherwise provide.
+-- formatters, linters, and debug adapters this config expects. No
+-- mason-lspconfig or mason-tool-installer: servers are wired up natively via
+-- `vim.lsp.enable`, and `ensure_tools()` below is the first-party stand-in
+-- for the tool installer.
 
 require("mars.pack").add({
   { src = "https://github.com/mason-org/mason.nvim" },
 })
 
--- `mason.setup()` prepends its `bin/` dir to PATH, but that only runs at
--- VimEnter, too late for LSP servers, which spawn on FileType for a buffer
--- opened at startup (e.g. `nvim package.json`). Prepend the bin dir here so
--- every server resolves its binary regardless of when it starts. Matching
--- mason's own default install root (`stdpath("data")/mason`); a missing dir
--- on PATH is harmless.
+-- `mason.setup()` prepends its bin/ dir to PATH only at VimEnter, too late
+-- for an LSP server that spawns for a buffer opened at startup, so prepend
+-- it here. Matching mason's own default install root; a missing dir on PATH
+-- is harmless.
 local sep = vim.fn.has("win32") == 1 and ";" or ":"
 local mason_bin = vim.fs.joinpath(vim.fn.stdpath("data") --[[@as string]], "mason", "bin")
 if not vim.env.PATH:find(mason_bin, 1, true) then
   vim.env.PATH = mason_bin .. sep .. vim.env.PATH
 end
 
---- Tools this config expects to stay installed, keyed by their name in
---- Mason's own registry (`:Mason` to browse it).
+--- Tools this config expects to stay installed, keyed by Mason registry name.
 local ensure_installed = {
   "blade-formatter",
   "docker-compose-language-service",
@@ -43,12 +39,10 @@ local ensure_installed = {
   "vtsls",
 }
 
---- Install every entry of `ensure_installed` that isn't on disk yet.
---- Refreshes the registry first (a no-op when its local cache is already
---- fresh), then installs the missing packages in parallel. Fully
---- asynchronous and non-interactive: nothing here blocks startup or waits
---- on user input, and a single summary notification is sent once every
---- install has settled rather than one per package.
+--- Install every `ensure_installed` entry not on disk yet, after refreshing
+--- the registry (a no-op when its cache is fresh). Asynchronous and
+--- non-interactive: nothing blocks startup, and one summary notification is
+--- sent once every install has settled.
 local function ensure_tools()
   local registry = require("mason-registry")
 
@@ -92,10 +86,9 @@ local function ensure_tools()
   end)
 end
 
--- `mason.setup()` only needs to run once; guarded here rather than through
--- `mars.pack`'s `cmd` trigger, since that trigger expects the plugin itself
--- to own the command being lazy-loaded, and `:MarsMasonInstall` is first
--- party.
+-- `mason.setup()` must run once; guarded here rather than via `mars.pack`'s
+-- `cmd` trigger, which expects the plugin itself to own the lazy-loaded
+-- command, and `:MarsMasonInstall` is first-party.
 local mason_ready = false
 
 --- @return nil

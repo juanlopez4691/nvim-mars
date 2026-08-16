@@ -1,8 +1,6 @@
--- Vendored from nvim-lspconfig's lsp/lua_ls.lua (reference source, not a
--- runtime dependency; see AGENTS.md's Native-First Philosophy), plus the
--- Neovim-config-aware on_init from that file's own doc comment, which scopes
--- the LuaJIT/vim-global augmentation to editing Mars's own config specifically
--- rather than any Lua project.
+-- Vendored from nvim-lspconfig's lsp/lua_ls.lua, plus the config-aware
+-- on_init from that file's doc comment: the LuaJIT/vim-global augmentation
+-- is scoped to editing Mars's own config, not any Lua project.
 
 local root_markers1 = {
   ".emmyrc.json",

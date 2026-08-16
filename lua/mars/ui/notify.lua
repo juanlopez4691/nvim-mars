@@ -1,15 +1,12 @@
--- Native replacement for vim.notify: renders each message in a small
--- floating window stacked in the top-right corner, auto-dismissing after a
--- level-dependent timeout. See AGENTS.md's Native-First Philosophy.
+-- Native vim.notify replacement: each message floats in a small window
+-- stacked top-right, auto-dismissed after a level-dependent timeout.
 
--- Substrings that mark a message as noise rather than signal (for example,
--- an LSP hover/signature request that came back empty). Matches are still
--- written to :messages via the original vim.notify, just never floated.
--- Keep this list short and add to it by exact substring, not a regex.
+-- Substrings that mark a message as noise rather than signal: still written
+-- to :messages via the original vim.notify, just never floated. Add by
+-- exact substring, not a regex.
 local suppressed_patterns = {
   "No information available",
-  -- blade-nav.nvim trying to register an nvim-cmp completion source: benign,
-  -- expected, and permanent; Mars has no nvim-cmp (native completion only).
+  -- blade-nav registering an nvim-cmp source: expected; Mars has no nvim-cmp.
   "BladeNav Warn",
 }
 
@@ -23,10 +20,9 @@ local hl_by_level = {
   [levels.TRACE] = "DiagnosticHint",
 }
 
--- Nerd Font glyphs are opt-in only (see AGENTS.md's Icons section); plain
--- letters are the default, always-safe fallback. vim.g.have_nerd_font is
--- set in lua/mars/local.lua, which loads after this module, so it must be
--- read at render time rather than memoized here at require time.
+-- Plain letters are the always-safe default; vim.g.have_nerd_font is set in
+-- lua/mars/local.lua, which loads after this module, so read it at render
+-- time rather than memoizing here.
 local nerd_font_icon_by_level = {
   [levels.ERROR] = "󰅚 ",
   [levels.WARN] = "󰀪 ",
@@ -69,16 +65,12 @@ local PAD_X = 1
 local PAD_Y = 1
 
 -- Must match the module path require_dir() derives for this file, so a
--- manual :source of this buffer can find what an earlier load stashed here.
+-- manual :source of this buffer finds what an earlier load stashed here.
 local MODULE_NAME = "mars.ui.notify"
 
--- The un-overridden vim.notify, kept as both the :messages sink and the
--- fallback for any internal failure below. :source re-runs this whole file,
--- so a naive `vim.notify` read here would, on the second run, capture our
--- own wrapper instead of the real thing and nest it. Stashing the true
--- original in package.loaded, read back before we overwrite it below,
--- means default_notify always resolves to the one real implementation, no
--- matter how many times this file gets re-sourced.
+-- The un-overridden vim.notify, kept as the :messages sink and the fallback
+-- for internal failures. Stashed in package.loaded so a re-source resolves
+-- it back instead of wrapping this wrapper.
 local stashed = package.loaded[MODULE_NAME]
 local default_notify = (type(stashed) == "table" and stashed.default_notify) or vim.notify
 
@@ -105,8 +97,7 @@ local function is_suppressed(msg)
 end
 
 --- Truncates `s` to at most `width` display columns without splitting a
---- multi-byte codepoint. Walks characters (not bytes), so accented and wide
---- glyphs are measured correctly.
+--- multi-byte codepoint.
 ---@param s string
 ---@param width integer
 ---@return string
@@ -123,9 +114,7 @@ local function truncate_to_width(s, width)
 end
 
 --- Greedily wraps text to at most `width` display columns, splitting on
---- whitespace; a single word longer than `width` is hard-truncated. Uses
---- display width throughout, not byte length, so accented/multi-byte text
---- wraps at the same column plain ASCII would.
+--- whitespace; a single word longer than `width` is hard-truncated.
 ---@param msg string
 ---@param width integer
 ---@return string[]
@@ -207,7 +196,7 @@ local function render(msg, level)
 
   local available = math.max(20, vim.o.columns - (MARGIN * 2) - 2)
   local width = math.min(MAX_WIDTH, available)
-  -- Reserve PAD_X columns on each side for the horizontal padding added below.
+  -- Reserve PAD_X columns on each side for the horizontal padding below.
   local text_width = math.max(1, width - vim.fn.strdisplaywidth(icon) - (PAD_X * 2))
 
   local lines = {}
@@ -225,8 +214,6 @@ local function render(msg, level)
   content_width = math.min(width - (PAD_X * 2), content_width)
   local win_width = content_width + (PAD_X * 2)
 
-  -- Inset each content line with PAD_X columns of blank space left/right,
-  -- then add PAD_Y blank lines above/below for vertical breathing room.
   local left_pad = string.rep(" ", PAD_X)
   local padded_lines = {}
   for _ = 1, PAD_Y do
@@ -284,9 +271,8 @@ local function render(msg, level)
   reflow()
 end
 
---- Drop-in vim.notify replacement. Safe to call from any context, including
---- vim.uv callbacks and other fast-event code where window/buffer APIs are
---- illegal; the actual work always runs on the next main-loop tick.
+--- Drop-in vim.notify replacement. Safe from fast-event contexts: the real
+--- work always runs on the next main-loop tick.
 ---@param msg string
 ---@param level integer?
 ---@param opts table?
@@ -296,15 +282,12 @@ local function notify(msg, level, opts)
 
   vim.schedule(function()
     if is_suppressed(msg) then
-      -- Fully dropped, not just hidden from the floating UI: the real
-      -- vim.notify still echoes WARN/ERROR-level messages to the cmdline
-      -- area even when only :messages-logging was wanted, so a suppressed
-      -- pattern has to skip default_notify too, not just the float.
+      -- Skip default_notify too: it still echoes WARN/ERROR messages to the
+      -- cmdline even when only :messages logging was wanted.
       return
     end
 
-    -- Record to :messages so nothing sent through this function (other
-    -- than an explicitly suppressed pattern above) is ever silently lost.
+    -- Record to :messages so nothing is ever silently lost.
     pcall(default_notify, msg, level, opts)
 
     local ok, err = pcall(render, msg, level)
@@ -316,12 +299,10 @@ end
 
 vim.notify = notify
 
--- Stash the real original so a later re-source of this file (:source %)
--- resolves default_notify above back to it instead of to this wrapper.
 package.loaded[MODULE_NAME] = { default_notify = default_notify }
 
--- clear = true so re-sourcing this file replaces this generation's
--- autocmds instead of stacking a duplicate set alongside the old ones.
+-- clear = true so re-sourcing replaces this generation's autocmds instead
+-- of stacking a duplicate set.
 local augroup = vim.api.nvim_create_augroup("mars_notify", { clear = true })
 
 -- Timers keep firing across a `:qa` unless stopped explicitly; nothing
@@ -343,7 +324,7 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
 })
 
 -- A float can also close because the user closed it by hand; drop it from
--- the stack and reflow so later notifications don't leave a gap.
+-- the stack so later notifications don't leave a gap.
 vim.api.nvim_create_autocmd("WinClosed", {
   group = augroup,
   callback = function(ev)

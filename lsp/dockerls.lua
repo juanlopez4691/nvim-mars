@@ -1,5 +1,4 @@
--- Vendored from nvim-lspconfig's lsp/dockerls.lua (reference source, not a
--- runtime dependency; see AGENTS.md's Native-First Philosophy).
+-- Vendored from nvim-lspconfig's lsp/dockerls.lua.
 
 ---@type vim.lsp.Config
 return {

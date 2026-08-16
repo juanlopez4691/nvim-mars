@@ -1,10 +1,8 @@
--- Vendored from nvim-lspconfig's lsp/tailwindcss.lua (reference source, not
--- a runtime dependency; see AGENTS.md's Native-First Philosophy), trimmed
--- to the filetypes actually edited here and with root_dir reduced to plain
--- config-file/marker lookup (no package.json dependency sniffing). PHP,
--- Blade, and Twig views mix inline HTML with template directives, so they're
--- mapped to the "html" language in includeLanguages to get class-name
--- completion and hover inside them.
+-- Vendored from nvim-lspconfig's lsp/tailwindcss.lua, trimmed to the
+-- filetypes edited here and with root_dir reduced to config/marker lookup
+-- (no package.json dependency sniffing). PHP, Blade, and Twig mix inline
+-- HTML with template directives, so they're mapped to the "html" language
+-- in includeLanguages for class-name completion/hover.
 
 ---@type vim.lsp.Config
 return {

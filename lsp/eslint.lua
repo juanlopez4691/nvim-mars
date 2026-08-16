@@ -1,11 +1,8 @@
--- Vendored from nvim-lspconfig's lsp/eslint.lua (reference source, not a
--- runtime dependency; see AGENTS.md's Native-First Philosophy). Two changes
--- from upstream: the `require("lspconfig.util")` call is dropped (that
--- module belongs to the plugin, not to us), which means the root_dir probe
--- no longer treats a legacy `eslintConfig` field inside package.json as a
--- config file; modern ESLint (9+) doesn't read that field either, so this
--- only affects very old setups. And the `nvim-0.11.3` version check is gone
--- since this config targets Neovim 0.12+ only.
+-- Vendored from nvim-lspconfig's lsp/eslint.lua. Deviations: the
+-- `lspconfig.util` root-dir probe is dropped (so a legacy package.json
+-- `eslintConfig` field no longer counts as a config file; modern ESLint 9+
+-- doesn't read it either), and the nvim-0.11.3 version check is gone since
+-- this config targets Neovim 0.12+.
 
 local eslint_config_files = {
   ".eslintrc",
@@ -59,9 +56,8 @@ return {
     end, {})
   end,
   root_dir = function(bufnr, on_dir)
-    -- The project root is where the LSP can be started from. This server
-    -- supports monorepos, so we look for a package manager lock file first
-    -- and only fall back to the working directory.
+    -- The server supports monorepos, so look for a package manager lockfile
+    -- first and only fall back to the working directory.
     local root_markers = { "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lockb", "bun.lock" }
     root_markers = { root_markers, { ".git" } }
 
@@ -72,8 +68,8 @@ return {
 
     local project_root = vim.fs.root(bufnr, root_markers) or vim.fn.getcwd()
 
-    -- Only attach where a buffer is actually covered by an ESLint config
-    -- file somewhere between it and the project root.
+    -- Only attach where a buffer is covered by an ESLint config file
+    -- somewhere between it and the project root.
     local filename = vim.api.nvim_buf_get_name(bufnr)
     local is_buffer_using_eslint = vim.fs.find(eslint_config_files, {
       path = filename,
@@ -93,8 +89,8 @@ return {
     codeActionOnSave = { enable = false },
   },
   before_init = function(_, config)
-    -- The "workspaceFolder" is a VSCode concept: it limits how far the
-    -- server will traverse the file system when locating the ESLint config.
+    -- The "workspaceFolder" limits how far the server traverses the file
+    -- system when locating the ESLint config.
     local root_dir = config.root_dir
     if root_dir then
       config.settings = config.settings or {}

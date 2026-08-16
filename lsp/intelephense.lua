@@ -1,13 +1,11 @@
--- Vendored from nvim-lspconfig's lsp/intelephense.lua (reference source, not
--- a runtime dependency; see AGENTS.md's Native-First Philosophy), extended
--- with php-stubs discovery so intelephense picks up globally-installed stub
+-- Vendored from nvim-lspconfig's lsp/intelephense.lua, extended with global
+-- php-stubs discovery so intelephense picks up globally-installed stub
 -- packages (e.g. `composer global require php-stubs/woocommerce-stubs`)
 -- without any project-local configuration.
 
---- Resolve global php-stubs install directories, if any are present.
---- Composer's global vendor dir may live under the legacy `~/.composer` path
---- or the XDG-style `~/.config/composer` path depending on how Composer
---- itself is configured, so both are probed and only existing ones are kept.
+--- Resolve global php-stubs install dirs, if any. Composer's global vendor
+--- may live under the legacy `~/.composer` or XDG-style `~/.config/composer`
+--- depending on its config, so both are probed and only existing ones kept.
 ---@return string[]
 local function stub_include_paths()
   local ok, home = pcall(vim.uv.os_homedir)
@@ -30,10 +28,8 @@ local function stub_include_paths()
   return paths
 end
 
--- Full stub catalogue intelephense can restrict itself to, covering core PHP
--- extensions plus a handful of common WordPress packages. Passed explicitly
--- (rather than relying on intelephense's bundled defaults) so stub coverage
--- stays stable across intelephense versions.
+-- Explicit stub catalogue (rather than intelephense's bundled defaults) so
+-- stub coverage stays stable across intelephense versions.
 local stubs = {
   "aerospike",
   "amqp",

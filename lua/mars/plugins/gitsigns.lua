@@ -1,6 +1,5 @@
 -- gitsigns.nvim: git gutter hunk signs, staging, and blame. Nontrivial
--- diff-parsing and debounced rendering (see AGENTS.md's approved exception
--- list).
+-- diff-parsing and debounced rendering.
 
 require("mars.pack").add({
   { src = "https://github.com/lewis6991/gitsigns.nvim" },
@@ -20,8 +19,7 @@ require("mars.pack").on({
 })
 
 --- Jump to the next/previous hunk. Defers to the native diff-mode jump
---- (`]c`/`[c`) inside a diff window, where those already do the right
---- thing; otherwise wraps around at the first/last hunk per 'wrapscan'.
+--- (`]c`/`[c`) in diff windows, where those already do the right thing.
 ---@param direction "next"|"prev"
 ---@return fun()
 local function nav_hunk(direction)

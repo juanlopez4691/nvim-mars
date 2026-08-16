@@ -1,11 +1,9 @@
--- Native treesitter textobject navigation: ]f/[f, ]c/[c, ]a/[a and their
--- uppercase variants, replacing nvim-treesitter-textobjects (see AGENTS.md's
--- Native-First Philosophy). Queries the current buffer's treesitter parse tree
--- for matching node types and jumps the cursor to the closest match relative
--- to cursor position.
+-- Treesitter textobject navigation: ]f/[f, ]c/[c, ]a/[a plus uppercase
+-- variants, replacing nvim-treesitter-textobjects. Queries the buffer's
+-- parse tree for matching node types and jumps to the closest match.
 
---- Node type sets per motion group. Each list is language-agnostic: types that
---- don't exist in the current language are silently no-ops.
+--- Node types per motion group. Language-agnostic: types that don't exist
+--- in the current language are silent no-ops.
 local GROUP_TYPES = {
   f = {
     "function_definition",
@@ -40,8 +38,7 @@ local GROUP_TYPES = {
 ---@field end_lnum integer 1-indexed end line
 ---@field end_col integer 0-indexed end column
 
---- Queries the current buffer's treesitter tree for nodes matching any of
---- `types`, returning them sorted by start position.
+--- Nodes matching any of `types` in the buffer's tree, sorted by start.
 ---@param buf integer
 ---@param types string[]
 ---@return MarsNavigation.Node[]
@@ -85,9 +82,8 @@ local function query_nodes(buf, types)
   return nodes
 end
 
---- Returns the first non-whitespace position inside the body of `node`, or the
---- node's start position if the body is empty. Skips the node's first line
---- (the declaration signature) to land inside actual body code.
+--- First non-whitespace position inside `node`'s body, skipping the
+--- declaration signature line; falls back to the node start if empty.
 ---@param buf integer
 ---@param node MarsNavigation.Node
 ---@return MarsNavigation.Position

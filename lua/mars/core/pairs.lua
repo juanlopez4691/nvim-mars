@@ -1,18 +1,8 @@
--- Native bracket/quote auto-pairing (replaces mini.pairs). Four behaviours,
--- each its own small `<expr>` insert-mode
--- keymap per character rather than one InsertCharPre autocmd: expr mappings
--- let a handler simply return the keys to feed (including motions like
--- `<Left>`/`<Right>`), so open/close/skip/backspace each stay a short,
--- independently readable function instead of one big char-dispatch table.
---
--- Scope-down: string/comment suppression uses
--- `vim.treesitter.get_captures_at_pos()` (the same highlight-capture signal
--- `lua/mars/ui/patterns.lua` relies on), gated to buffers where a parser is
--- actually attached; pcall falls through to "not suppressed" for
--- plain-text buffers or filetypes with no parser. Freshness of a pair (for
--- backspace) is not tracked; like mini.pairs' own default, any adjacent
--- matching empty pair is treated as one unit, not just ones this module
--- just inserted.
+-- Native bracket/quote auto-pairing (replaces mini.pairs). One `<expr>`
+-- insert-mode keymap per character, each a small
+-- function. Pairing is suppressed inside strings/comments via treesitter
+-- highlight captures; pair freshness isn't tracked, so any adjacent
+-- matching empty pair is treated as one unit (mini.pairs' own default).
 
 --- Opening bracket -> matching closer.
 local BRACKETS = { ["("] = ")", ["["] = "]", ["{"] = "}" }
@@ -23,8 +13,7 @@ local CLOSERS = { [")"] = "(", ["]"] = "[", ["}"] = "{" }
 --- Quote characters, where opener and closer are the same glyph.
 local QUOTES = { ['"'] = true, ["'"] = true, ["`"] = true }
 
---- Every character (open or close) that matches an empty pair for the
---- backspace-delete-pair check below.
+--- Every character that can form an empty pair, for backspace-delete-pair.
 local EMPTY_PAIRS = {}
 for open_char, close_char in pairs(BRACKETS) do
   EMPTY_PAIRS[open_char] = close_char
@@ -36,10 +25,9 @@ end
 --- treesitter capture-name prefixes that suppress opening a new pair.
 local SUPPRESS_PREFIXES = { "string", "comment" }
 
---- Character immediately before the cursor, or "" at the start of the
---- line. Byte-indexed: for a multibyte char this returns one byte, not
---- the full character, which is fine here since it's only ever compared
---- against single-byte ASCII bracket/quote characters.
+--- Character before the cursor, or "" at the start of the line. Byte-
+--- indexed; fine, since it's only ever compared against single-byte
+--- ASCII brackets/quotes.
 ---@return string
 local function char_before()
   local col = vim.api.nvim_win_get_cursor(0)[2]
@@ -49,26 +37,22 @@ local function char_before()
   return vim.api.nvim_get_current_line():sub(col, col)
 end
 
---- Character immediately after the cursor, or "" at the end of the line.
---- Same byte-indexing caveat as `char_before`.
+--- Character after the cursor, or "" at the end of the line. Same
+--- byte-indexing caveat as `char_before`.
 ---@return string
 local function char_after()
   local col = vim.api.nvim_win_get_cursor(0)[2]
   return vim.api.nvim_get_current_line():sub(col + 1, col + 1)
 end
 
---- Whether the treesitter node at (0-based) `row, col` is captured as a
---- string or comment. Buffers with no attached parser (the call errors, or
---- returns no captures) are treated as unsuppressed so pairing still works
---- in plain-text files.
+--- Whether the treesitter node at (0-based) `row, col` is a string or
+--- comment. Buffers with no parser fall through as unsuppressed.
 ---@param row integer 0-based
 ---@param col integer 0-based
 ---@return boolean
 local function node_is_suppressed(row, col)
-  -- Force the parser to sync with pending buffer edits before querying:
-  -- the highlighter's cached tree is normally refreshed by the redraw
-  -- cycle, which typing fast enough (or a headless/no-UI session) can
-  -- outrun, otherwise leaving a just-typed character's context stale.
+  -- Force the parser to sync with pending edits: the highlighter's cached
+  -- tree can otherwise lag behind a just-typed character.
   local ok_parser, parser = pcall(vim.treesitter.get_parser, 0)
   if ok_parser and parser then
     pcall(parser.parse, parser)
@@ -88,13 +72,10 @@ local function node_is_suppressed(row, col)
   return false
 end
 
---- Whether the cursor currently sits inside (or immediately after) a
---- string or comment. Checks both the cursor's column and the one before
---- it: `vim.treesitter` node ranges are half-open (end-exclusive), so
---- appending more text at the very end of an unterminated node, e.g.
---- typing further into a `--` comment that runs to end of line, with no
---- closing delimiter after the cursor, which would otherwise fall just outside
---- the node's range and read as unsuppressed.
+--- Whether the cursor sits inside (or just after) a string/comment. The
+--- column before the cursor is checked too because node ranges are
+--- half-open: appending at the very end of an unterminated node (e.g. a
+--- `--` comment running to EOL) would otherwise read as unsuppressed.
 ---@return boolean
 local function in_string_or_comment()
   local cursor = vim.api.nvim_win_get_cursor(0)
@@ -105,10 +86,9 @@ local function in_string_or_comment()
   return col > 0 and node_is_suppressed(row, col - 1)
 end
 
---- Handles typing an opening bracket: inserts the matching closer and
---- places the cursor between them, unless the cursor is inside a
---- string/comment or the next character is a word character (e.g. typing
---- `(` mid-identifier shouldn't split it with a stray pair).
+--- Handles an opening bracket: inserts closer and places the cursor
+--- between them, unless inside a string/comment or before a word char
+--- (typing `(` mid-identifier shouldn't split it).
 ---@param open_char string
 ---@param close_char string
 ---@return string
@@ -125,9 +105,9 @@ local function open_bracket(open_char, close_char)
   return open_char .. close_char .. "<Left>"
 end
 
---- Handles typing a closing bracket: moves past an already-present
---- matching closer (skip-over) instead of inserting a duplicate. Always
---- available, even inside strings/comments; it never adds a new pair.
+--- Handles a closing bracket: moves past an already-present matching
+--- closer instead of duplicating it. Always active, even in strings/
+--- comments; it never adds a pair.
 ---@param close_char string
 ---@return string
 local function close_bracket(close_char)
@@ -137,11 +117,9 @@ local function close_bracket(close_char)
   return close_char
 end
 
---- Handles typing a quote character (opener and closer are the same
---- glyph): skips over an immediately-following matching quote; otherwise
---- opens a new pair unless the cursor is inside a string/comment, or is
---- adjacent to a word character, guarding contractions like "don't" and
---- mid-identifier quotes from being paired.
+--- Handles a quote: skips an immediately-following matching quote,
+--- otherwise opens a pair unless inside a string/comment or adjacent to a
+--- word char (guards contractions like "don't").
 ---@param quote string
 ---@return string
 local function pair_quote(quote)
@@ -161,8 +139,8 @@ local function pair_quote(quote)
   return quote .. quote .. "<Left>"
 end
 
---- Handles `<BS>`: deletes both characters of an adjacent empty pair (e.g.
---- `(|)`, `"|"`) as one unit instead of leaving a dangling closer behind.
+--- Handles `<BS>`: deletes both chars of an adjacent empty pair (e.g.
+--- `(|)`, `"|"`) as one unit.
 ---@return string
 local function backspace()
   local before, after = char_before(), char_after()

@@ -1,23 +1,16 @@
--- Native project-root detection, computed on demand.
--- Prefers an
--- attached LSP client's own root_dir/workspace_folders (servers already do
--- sophisticated detection of their own; vtsls looks for a lockfile,
--- intelephense for composer.json; so this reuses that instead of guessing
--- again), then the nearest ".git" ancestor, then 'cwd' as a last resort.
--- Crucially, unlike an autocmd-driven `:cd`, this never touches Neovim's
--- actual working directory: a caller that wants the detected root to
--- affect where a command runs (`:grep`, a picker, ...) passes it explicitly
--- itself, so a wrong guess only affects that one call, not the whole
--- session, and cwd never flip-flops just from switching buffers.
+-- Project-root detection computed on demand: an attached LSP client's own
+-- root_dir/workspace_folders (servers already detect their own root), then
+-- the nearest ".git" ancestor, then 'cwd'. Never touches Neovim's actual
+-- cwd; callers pass the root explicitly, so a wrong guess affects only
+-- that one call and cwd never flip-flops on buffer switches.
 
 local M = {}
 
 ---@type table<integer, string>
 local cache = {}
 
---- The root_dir/workspace_folder of an LSP client attached to `buf` whose
---- root actually contains `name` (the buffer's own absolute path), or nil
---- if no attached client's root qualifies.
+--- An attached LSP client's root_dir/workspace_folder that actually
+--- contains `name`, or nil if none qualifies.
 ---@param buf integer
 ---@param name string absolute path
 ---@return string?
@@ -39,9 +32,9 @@ local function lsp_root(buf, name)
   return nil
 end
 
---- The project root for `buf`: an attached LSP client's own root when
---- available, else the nearest ".git" ancestor, else 'cwd'. Cached per
---- buffer until something that could change the answer happens.
+--- The project root for `buf`: LSP root, else nearest ".git" ancestor,
+--- else 'cwd'. Cached per buffer until something that could change the
+--- answer happens.
 ---@param buf? integer
 ---@return string
 function M.get(buf)

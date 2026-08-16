@@ -1,23 +1,9 @@
--- Native reimplementation of the vim-surround/mini.surround core motions
--- (see AGENTS.md's Native-First Philosophy): `ds{char}` deletes a
--- surrounding pair, `cs{old}{new}` swaps one surrounding pair for another,
--- `ys{motion}{char}`/`yss{char}` adds a pair around a motion or the current
--- line, and visual-mode `S{char}` adds one around the selection. No
--- treesitter-node-aware "surround the enclosing call" mode and no tag
--- (`t`) surround; see the module doc below for the full scope-down list.
---
--- Bracket pairs `()`, `[]`, `{}` are matched with `searchpairpos()`
--- (handles nesting, spans lines). Quote pairs `"`, `'`, `` ` `` are matched
--- by scanning the current line only, pairing unescaped occurrences
--- sequentially; quotes don't nest, so unlike brackets there is no
--- well-defined multi-line partner to search for. `cs`/`ds` only operate on
--- a pair the cursor is inside of, or (for quotes only) the next pair at or
--- after the cursor on the same line.
---
--- Padding follows vim-surround convention: typing the *opening* variant of
--- a bracket (`(`, `[`, `{`) as the new/target character pads the inside
--- with a space (`ysiw(` -> `( word )`); the closing variant, or any quote
--- or generic character, inserts tight with no padding (`ysiw)` -> `(word)`).
+-- Native vim-surround core: `ds{char}`, `cs{old}{new}`, `ys{motion}{char}`,
+-- `yss{char}`, visual `S{char}`. Brackets matched with searchpairpos()
+-- (nesting-aware, spans lines); quotes scanned on the current line only;
+-- they don't nest, so there's no well-defined multi-line partner. Padding
+-- follows vim-surround: an opening bracket variant pads the inside; the
+-- closing variant or a quote inserts tight.
 
 local M = {}
 
@@ -42,11 +28,8 @@ local OPENING_BRACKET = { ["("] = true, ["["] = true, ["{"] = true }
 ---@type table<string, boolean>
 local QUOTES = { ['"'] = true, ["'"] = true, ["`"] = true }
 
---- Vim-regex pattern for each bracket character we search for. `(`, `)`,
---- `{`, `}` are literal by default under 'magic' (backslash-escaping them
---- turns them into grouping/repeat operators instead, the opposite of
---- what we want); `[` is the one magic metacharacter of the six (starts a
---- character class), so it and its `]` counterpart are escaped.
+--- Vim-regex pattern per bracket. `(`/`)`/`{`/`}` are literal under 'magic';
+--- `[` starts a character class, so it and `]` are escaped.
 ---@type table<string, string>
 local BRACKET_PATTERN = {
   ["("] = "(",
@@ -63,11 +46,8 @@ local BRACKET_PATTERN = {
 ---@field [1] integer row (1-indexed)
 ---@field [2] integer col (0-indexed)
 
---- Finds the innermost `open`/`close` bracket pair enclosing the cursor,
---- via `searchpairpos()` (nesting-aware, may span lines). Returns nil if
---- the cursor isn't inside such a pair. `searchpairpos()` returns
---- 1-indexed columns (Vim convention); this converts them to the
---- 0-indexed columns `Mars.Surround.Pos` otherwise uses throughout.
+--- Finds the innermost `open`/`close` bracket pair enclosing the cursor via
+--- searchpairpos(), or nil. Converts its 1-indexed columns to 0-indexed.
 ---@param open string
 ---@param close string
 ---@return Mars.Surround.Pos|nil open_pos
@@ -92,10 +72,9 @@ local function find_bracket_pair(open, close)
   return { open_pos[1], open_pos[2] - 1 }, { close_pos[1], close_pos[2] - 1 }
 end
 
---- Finds the `quote`-character pair on the current line that either
---- encloses the cursor or is the next such pair at/after it. Escaped
---- quotes (`\"`) are skipped. Restricted to the current line; see the
---- module doc for why quotes aren't matched across lines.
+--- Finds the `quote` pair on the current line enclosing the cursor or the
+--- next one at/after it, skipping escaped quotes. Same line only: see
+--- the module doc.
 ---@param quote string
 ---@return integer|nil open_col 0-indexed
 ---@return integer|nil close_col 0-indexed
@@ -126,10 +105,8 @@ local function find_quote_pair(quote)
   return nil, nil
 end
 
---- Resolves `char` (as typed after `ds`/the first char after `cs`) to the
---- open/close positions of the surrounding pair it identifies, or nil (with
---- a warning notification) if `char` isn't a supported target or no such
---- pair encloses the cursor.
+--- Resolves `char` to the open/close positions of its surrounding pair, or
+--- nil (with a warning) if unsupported or nothing encloses the cursor.
 ---@param char string
 ---@return Mars.Surround.Pos|nil open_pos
 ---@return Mars.Surround.Pos|nil close_pos
@@ -157,11 +134,8 @@ local function resolve_pair(char)
   return open_pos, close_pos
 end
 
---- Returns the literal open/close delimiter strings to insert for `char`
---- as a *new* surround target (used by `ys`/`yss`/visual `S`, and as the
---- replacement side of `cs`). See the module doc for the padding
---- convention. Any other single character (e.g. `*`) is inserted as-is on
---- both sides, matching vim-surround's generic-character behaviour.
+--- Literal open/close delimiters for `char` as a new surround target.
+--- Opening bracket variants pad the inside; anything else inserts as-is.
 ---@param char string
 ---@return string|nil open_delim
 ---@return string|nil close_delim
@@ -195,9 +169,7 @@ local function replace_char_at(pos, text)
   vim.api.nvim_buf_set_text(0, row, col, row, col + 1, { text })
 end
 
---- `ds{char}`: deletes the surrounding pair identified by `char`. Deletes
---- the close side first so the (already-captured) open position stays
---- valid.
+--- `ds{char}`. Deletes the close side first so the open position stays valid.
 ---@param char string
 local function delete_surround(char)
   local open_pos, close_pos = resolve_pair(char)
@@ -218,10 +190,6 @@ local function change_surround(old, new_char)
     return
   end
 
-  -- `cs` never adds padding (unlike `ys`): always use the bare delimiter,
-  -- not the padded variant `delimiters_for` returns for the opening
-  -- bracket variant; it only swaps delimiters, leaving existing padding
-  -- (if any) untouched.
   local new_open, new_close
   local bracket = BRACKETS[new_char]
   if bracket then
@@ -252,12 +220,10 @@ local function wrap_charwise(start_pos, end_pos, open_delim, close_delim)
   vim.api.nvim_buf_set_text(0, srow, scol, srow, scol, { open_delim })
 end
 
---- Inserts `open_delim`/`close_delim` tightly around the trimmed content
---- of a linewise span (first non-blank char of the first line through the
---- last non-blank char of the last line). Used for both `yss`/visual
---- linewise `S` (where start/end are the same line) and general linewise
---- operator motions. Scope-down: unlike vim-surround's `yS`, this never
---- puts the delimiters on their own re-indented lines; see module doc.
+--- Inserts `open_delim`/`close_delim` tightly around a linewise span (first
+--- non-blank through last non-blank). Used by `yss`/visual linewise `S` and
+--- linewise operator motions. Unlike vim-surround's `yS`, never re-indents
+--- the delimiters onto their own lines.
 ---@param start_pos Mars.Surround.Pos
 ---@param end_pos Mars.Surround.Pos
 ---@param open_delim string
@@ -274,9 +240,8 @@ local function wrap_linewise(start_pos, end_pos, open_delim, close_delim)
   wrap_charwise({ srow, scol }, { erow, ecol }, open_delim, close_delim)
 end
 
---- Prompts (via `getcharstr()`) for the surround target character,
---- resolving delimiters for it. Returns nil (no-op, already warned) on an
---- unsupported char or a cancel (`<Esc>`).
+--- Prompts for the target char via getcharstr(), resolving its delimiters.
+--- Returns nil on cancel or an unsupported char.
 ---@return string|nil open_delim
 ---@return string|nil close_delim
 local function prompt_delimiters()
@@ -293,10 +258,8 @@ local function prompt_delimiters()
   return open_delim, close_delim
 end
 
---- `operatorfunc` target for `ys{motion}`. Invoked by Neovim after the
---- motion following `ys` resolves; reads the `'[`/`']` marks it left and
---- prompts for the surround character. Blockwise motions are treated the
---- same as charwise (a known scope-down; see module doc).
+--- `operatorfunc` target for `ys{motion}`: reads the `'[`/`']` marks the
+--- motion left and prompts for the surround char.
 ---@param motion_type "line"|"char"|"block"
 function M.opfunc(motion_type)
   local open_delim, close_delim = prompt_delimiters()
@@ -354,8 +317,7 @@ vim.keymap.set("x", "S", function()
     start, finish = finish, start
   end
 
-  -- Leave visual mode before touching the buffer/prompting for input,
-  -- same as vim-surround: the selection is only needed for its bounds.
+  -- Leave visual mode before prompting; only the selection bounds are needed.
   vim.cmd("normal! " .. vim.api.nvim_replace_termcodes("<Esc>", true, false, true))
 
   local open_delim, close_delim = prompt_delimiters()

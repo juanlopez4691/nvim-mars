@@ -1,19 +1,11 @@
--- Directional split navigation and resize, reproducing vim-tmux-navigator's
--- Ctrl-hjkl wrapping and an edge-aware Alt-arrow resize natively (see
--- AGENTS.md's Native-First Philosophy); both are a handful of `wincmd`/
--- `resize` calls plus a screen-edge check, not worth a plugin dependency.
+-- Directional split navigation (vim-tmux-navigator-style wrapping) and
+-- edge-aware Alt-arrow resize, both natively via `wincmd`/`resize`.
 
---- Opposite direction for each `wincmd` motion, used to wrap focus around
---- to the far edge when a jump in the primary direction didn't move focus
---- at all (i.e. the current split is already at that screen edge).
+--- Opposite direction for each `wincmd` motion, used to wrap focus to the
+--- far edge when a jump didn't move it at all.
 local OPPOSITE = { h = "l", l = "h", j = "k", k = "j" }
 
---- Filetypes that are plugin UI panes where resizing doesn't make sense:
---- the netrw sidebar (fixed-width tree, see lua/mars/core/netrw.lua) and
---- nvim-dap-ui's element windows plus nvim-dap's own REPL buffer (fixed
---- layout panes, see lua/mars/plugins/dap.lua and nvim-dap-ui's element
---- sources under lua/dapui/elements/*.lua for these exact filetype
---- strings).
+--- Filetypes that are plugin UI panes where resizing makes no sense.
 local SKIP_FILETYPES = {
   netrw = true,
   dapui_scopes = true,
@@ -25,10 +17,9 @@ local SKIP_FILETYPES = {
   ["dap-repl"] = true,
 }
 
---- Buftypes that are plugin/native UI panes where resizing doesn't make
---- sense. Quickfix and location-list windows share buftype "quickfix" (see
---- lua/mars/core/diagnostics.lua, which populates both via
---- setqflist/setloclist), so this alone covers both.
+--- Buftypes that are plugin/native UI panes where resizing makes no sense.
+--- Quickfix and location lists share buftype "quickfix", so this covers
+--- both.
 local SKIP_BUFTYPES = {
   quickfix = true,
 }
@@ -55,9 +46,8 @@ local function is_bottommost(win)
   return pos[1] + vim.api.nvim_win_get_height(win) >= vim.o.lines - vim.o.cmdheight - 1
 end
 
---- Runs `wincmd` toward `direction`, `count` times, and reports whether
---- focus actually moved to a different window; it won't if the current
---- split is already at that screen edge.
+--- Runs `wincmd` toward `direction`, `count` times, reporting whether
+--- focus actually moved (it won't if already at that screen edge).
 ---@param direction "h"|"j"|"k"|"l"
 ---@param count integer
 ---@return boolean moved
@@ -67,11 +57,9 @@ local function try_move(direction, count)
   return vim.fn.winnr() ~= before
 end
 
---- Moves focus one split toward `direction`, wrapping around to the split
---- at the opposite screen edge (vim-tmux-navigator style) when `direction`
---- didn't move focus at all. A count applies to the primary move; the
---- wrap-around jump always goes all the way to the far edge, mirroring how
---- moving off one screen edge lands on the other.
+--- Moves focus one split toward `direction`, wrapping to the opposite
+--- screen edge when it didn't move at all. A count applies to the primary
+--- move; the wrap jump always goes all the way to the far edge.
 ---@param direction "h"|"j"|"k"|"l"
 local function move(direction)
   if not try_move(direction, vim.v.count1) then
@@ -79,21 +67,18 @@ local function move(direction)
   end
 end
 
---- Whether the current window is one of the plugin UI panes resizing
---- should skip (see SKIP_FILETYPES/SKIP_BUFTYPES above). Read at call time
---- rather than memoized, since it depends on whichever window/buffer is
---- current when a resize keymap fires.
+--- Whether the current window is a UI pane resizing should skip (see
+--- SKIP_FILETYPES/SKIP_BUFTYPES). Read at call time, since it depends on
+--- the window/buffer current when the keymap fires.
 ---@return boolean
 local function skip_resize()
   return SKIP_FILETYPES[vim.bo.filetype] or SKIP_BUFTYPES[vim.bo.buftype] or false
 end
 
 --- Resizes the current split toward `direction`, growing or shrinking
---- depending on which screen edge the split is already on so the visual
---- result always matches intuition; e.g. "resize right" grows a split on
---- the left half of the screen but shrinks one on the right half, since
---- there's no room on its right to grow into. No-ops on plugin UI panes
---- where resizing doesn't make sense (see skip_resize).
+--- depending on which screen edge it's on so the result matches intuition
+--- ("resize right" grows a split on the left half but shrinks one on the
+--- right, which has no room to grow). No-ops on UI panes (see skip_resize).
 ---@param direction "left"|"right"|"up"|"down"
 local function resize(direction)
   if skip_resize() then
@@ -111,19 +96,12 @@ local function resize(direction)
   end
 end
 
---- Re-equalizes splits after the terminal window changes size. Neovim
---- rescales windows proportionally on resize, which drifts: repeated
---- resizes accumulate rounding leftovers and a split that was half the
---- screen ends up visibly off. Every tabpage is equalized, not just the
---- current one, since background tabs are laid out at the old size and
---- would otherwise stay skewed until they're entered.
----
---- `nvim_win_call` on each tabpage's current window scopes `wincmd =` to
---- that tabpage without the `tabdo` side effects (WinEnter/BufEnter
---- autocmds firing everywhere, the alternate tab being clobbered), and
---- leaves the current window untouched. Windows with 'winfixwidth' or
---- 'winfixheight', the netrw sidebar (see lua/mars/core/netrw.lua) and
---- nvim-dap-ui's panes, keep their size, as `wincmd =` honours both.
+--- Re-equalizes splits after the terminal resizes: Neovim's proportional
+--- rescale drifts, and every tabpage is equalized since background tabs
+--- were laid out at the old size. `nvim_win_call` scopes `wincmd =` to each
+--- tabpage without `tabdo` side effects (WinEnter/BufEnter firing, the
+--- alternate tab being clobbered). Windows with 'winfixwidth'/'winfixheight'
+--- (netrw sidebar, dap-ui panes) keep their size.
 local function equalize()
   for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
     vim.api.nvim_win_call(vim.api.nvim_tabpage_get_win(tab), function()
@@ -172,10 +150,9 @@ for _, key in ipairs({ "<A-Down>", "<C-A-j>" }) do
   end, { silent = true, desc = "Window: resize down" })
 end
 
--- The <C-w> split/close commands replicated under <leader>w: the suffix
--- letter matches the <C-w> one (so <leader>wv is :vsplit, exactly <C-w>v),
--- giving a second, thumb-reachable way to run them. The native <C-w> maps
--- and the navigation/resize maps above are left untouched.
+-- The <C-w> split/close commands under <leader>w; the suffix letter matches
+-- the <C-w> one (<leader>wv = :vsplit = <C-w>v), for a thumb-reachable
+-- second way to run them. The native <C-w> maps are left untouched.
 for suffix, spec in pairs({
   v = { cmd = "vsplit", desc = "Window: split vertically" },
   s = { cmd = "split", desc = "Window: split horizontally" },

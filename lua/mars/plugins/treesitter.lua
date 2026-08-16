@@ -1,6 +1,6 @@
 -- nvim-treesitter (main branch): parser install/update only. Runtime
--- highlighting/folding is native (vim.treesitter.*); see below. The plugin
--- does not support lazy-loading (per its own README), so this loads eagerly.
+-- highlighting/folding is native (vim.treesitter.*). The plugin doesn't
+-- support lazy-loading (per its README), so this loads eagerly.
 
 require("mars.pack").add({
   { src = "https://github.com/nvim-treesitter/nvim-treesitter", version = "main" },

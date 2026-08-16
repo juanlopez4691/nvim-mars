@@ -1,7 +1,6 @@
--- Enhanced text objects: native replacements for mini.ai, providing
--- function-call text objects (`if`/`af`, treesitter-driven) and
--- entire-buffer text objects (`iB`/`aB`).  Registered in both operator-
--- pending and visual modes so they compose with `d`/`y`/`c`/etc.
+-- Enhanced text objects: native replacements for mini.ai, function-call
+-- text objects (`if`/`af`, treesitter-driven) and entire-buffer objects
+-- (`iB`/`aB`) in operator-pending and visual modes.
 
 ---@param around boolean true for "around" (includes trailing paren)
 local function select_function_call(around)

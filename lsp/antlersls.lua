@@ -1,19 +1,11 @@
--- Vendored from nvim-lspconfig's lsp/antlersls.lua (reference source, not a
--- runtime dependency; see AGENTS.md's Native-First Philosophy), with root
--- resolution replaced by an actual Statamic-project check.
---
--- Upstream's filetypes list includes plain "html", and root_markers has no
--- way to distinguish "this HTML buffer lives in a Statamic project" from
--- "this HTML buffer lives in literally any git repo"; a bare ".git" marker
--- would match nearly every project on disk, which is exactly the eager
--- attachment this file exists to avoid. Instead, root_dir walks up to the
--- nearest composer.json, and only calls on_dir when that project actually
--- looks like Statamic: either its require/require-dev lists a statamic/*
--- package, or a content/ directory sits next to it (the other reliable
--- on-disk signal for a Statamic site, e.g. for setups that don't manage
--- Statamic through Composer). A missing or unparsable composer.json is
--- treated as "not Statamic", never as an error. If neither signal is found,
--- on_dir is never called and the client does not start for that buffer.
+-- Vendored from nvim-lspconfig's lsp/antlersls.lua, with root resolution
+-- replaced by an actual Statamic-project check: upstream's filetypes include
+-- plain "html" and its ".git" root_marker would attach HTML buffers in
+-- nearly any git repo. Instead, root_dir walks to the nearest composer.json
+-- and only calls on_dir when that project looks like Statamic: its
+-- require/require-dev lists a statamic/* package, or a content/ directory
+-- sits beside it. A missing/unparsable composer.json is treated as "not
+-- Statamic", never as an error.
 
 --- Decode composer.json at `path`, if present and valid JSON.
 ---@param path string

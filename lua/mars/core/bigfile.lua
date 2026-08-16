@@ -1,17 +1,15 @@
--- Performance guard for very large files: syntax highlighting, Treesitter,
--- LSP, spellcheck, swapfiles, folding, and the cursorline all get more
--- expensive to maintain as a buffer grows, and none of them are worth
--- paying for on a multi-megabyte log or a five-figure-line generated file.
--- This turns them off per-buffer once a file crosses either threshold,
--- rather than requiring the user to notice the slowdown and disable things
--- by hand.
+-- Per-buffer guard that disables expensive features (syntax, treesitter,
+-- LSP, spell, swapfile, folding, cursorline) once a file crosses either
+-- threshold.
 
 local MAX_FILESIZE = 1.5 * 1024 * 1024 -- 1.5 MB
 local MAX_LINES = 5000
 
---- Whether a just-read buffer counts as "big" under either threshold. Line
---- count is only meaningful once the buffer is loaded, so this is only
---- ever called from BufReadPost, never BufReadPre.
+--- Line count only means anything once the buffer is loaded, so this is
+--- only called from BufReadPost, never BufReadPre.
+---@param buf integer
+---@param file string
+---@return boolean
 ---@param buf integer
 ---@param file string
 ---@return boolean
@@ -32,8 +30,7 @@ vim.api.nvim_create_autocmd("BufReadPost", {
       return
     end
 
-    -- Flagged so the LspAttach guard below can recognize this buffer even
-    -- when a client attaches after this callback already ran.
+    -- LSP clients can attach after this callback already ran.
     vim.b[args.buf].mars_bigfile = true
 
     vim.bo[args.buf].syntax = "off"
@@ -50,10 +47,7 @@ vim.api.nvim_create_autocmd("BufReadPost", {
   end,
 })
 
--- LSP servers routinely attach asynchronously, after BufReadPost has
--- already fired and detached whatever was attached at that point. Without
--- this, a client started moments later would go on to index a big file the
--- guard above just paid to stop treating as normal-sized.
+-- LSP servers attach asynchronously, after BufReadPost has already fired.
 vim.api.nvim_create_autocmd("LspAttach", {
   group = group,
   desc = "Keep LSP clients off buffers flagged as big files",

@@ -1,7 +1,6 @@
--- Vendored from nvim-lspconfig's lsp/docker_compose_language_service.lua
--- (reference source, not a runtime dependency; see AGENTS.md's Native-First
--- Philosophy). If it doesn't attach on a compose file, confirm the buffer's
--- filetype is actually `yaml.docker-compose` (`:set filetype=yaml.docker-compose`).
+-- Vendored from nvim-lspconfig's lsp/docker_compose_language_service.lua.
+-- If it won't attach on a compose file, confirm the buffer's filetype is
+-- `yaml.docker-compose` (`:set filetype=yaml.docker-compose`).
 
 ---@type vim.lsp.Config
 return {

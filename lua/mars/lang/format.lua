@@ -1,8 +1,6 @@
--- Native formatting: a BufWritePre hook plus a manual :MarsFormat command.
--- Every formatter is run against a copy of the buffer's content (stdin, or a
--- scratch file for tools that only know how to edit a file in place) so the
--- real file on disk is never touched directly; the result only lands in the
--- buffer, once, after the external command has actually succeeded.
+-- Native formatting: BufWritePre hook plus a :MarsFormat command. Formatters
+-- run against a copy of the buffer (stdin, or a scratch file for tools that
+-- edit in place), so the real file is only replaced after the command succeeds.
 
 local tools = require("mars.lang.tools")
 
@@ -12,9 +10,8 @@ local M = {}
 ---@field name string Display name used in notifications
 ---@field bin string Executable name, resolved via mars.lang.tools
 ---@field args string[] Argument list; "$FILENAME" is substituted per run
----@field stdin? boolean Feed buffer content on stdin and read stdout back;
----  when falsy the buffer is written to a scratch file and "$FILENAME"
----  points at that file instead, whose contents are read back afterwards.
+---@field stdin? boolean Feed buffer content on stdin; when falsy, write to a
+---  scratch file named after the buffer and read it back after.
 ---@field condition? fun(root: string): boolean Project-aware gate; a missing
 ---  condition always passes.
 
@@ -47,10 +44,9 @@ local FORMATTERS = {
 
 ---@class mars.FormatSpec
 ---@field formatters mars.Formatter[]
----@field mode? "first"|"chain" "first" (default) stops at the first
----  formatter whose condition passes and applies only its output; "chain"
----  runs every applicable formatter in order, feeding each one's output into
----  the next, and only applies the result once the whole chain succeeds.
+---@field mode? "first"|"chain" "first" (default) stops at the first formatter
+---  whose condition passes; "chain" runs every applicable one in order,
+---  feeding each output into the next, and applies only once all succeed.
 
 ---@type table<string, mars.FormatSpec>
 local FORMATTERS_BY_FT = {
@@ -72,10 +68,8 @@ local FORMATTERS_BY_FT = {
 }
 
 --- Runs a single formatter against `lines`, returning its replacement
---- content. Non-stdin formatters get a scratch copy of the buffer (named
---- after the real file, so extension-sensitive tools like blade-formatter
---- still detect the right language) instead of touching the file being
---- edited.
+--- content. Non-stdin formatters get a scratch copy named after the real
+--- file, so extension-sensitive tools still detect the right language.
 ---@param formatter mars.Formatter
 ---@param resolved string Resolved executable path
 ---@param lines string[]
@@ -83,10 +77,8 @@ local FORMATTERS_BY_FT = {
 ---@return boolean ok
 ---@return string[]? lines
 ---@return string? err
---- Hard ceiling on how long an external formatter may block a save. Passed
---- to SystemObj:wait(), which kills the process and returns promptly if it's
---- exceeded; without this, a wedged daemon (prettierd is a known offender)
---- would hang Neovim on every write with no way out.
+--- Ceiling on how long a formatter may block a save; SystemObj:wait() kills
+--- the process past this (prettierd is a known offender).
 local FORMAT_TIMEOUT_MS = 5000
 
 ---@param lines string[]
@@ -111,8 +103,7 @@ local function run_formatter(formatter, resolved, lines, filename)
 
   local input = formatter.stdin and (table.concat(lines, "\n") .. "\n") or nil
   local result = vim.system(cmd, { stdin = input, text = true }):wait(FORMAT_TIMEOUT_MS)
-  -- SystemObj:wait() kills the process and reports exit code 124 (the same
-  -- sentinel GNU `timeout` uses) once the deadline above is hit.
+  -- SystemObj:wait() reports exit code 124 (the GNU timeout sentinel) on timeout.
   local timed_out = result.code == 124 and result.signal == 9
 
   local output_lines, read_err
@@ -153,8 +144,7 @@ local function run_formatter(formatter, resolved, lines, filename)
     return false, nil, read_err
   end
 
-  -- A formatter that exits 0 but produces nothing is failing silently, not
-  -- succeeding; never let that blank out real content.
+  -- Exit 0 with no output is a silent failure; don't let it blank real content.
   if not is_blank(lines) and is_blank(output_lines) then
     return false, nil, "produced empty output"
   end
@@ -162,9 +152,9 @@ local function run_formatter(formatter, resolved, lines, filename)
   return true, output_lines
 end
 
---- Runs a format spec's formatter list against `lines`. See mars.FormatSpec
---- for "first" vs "chain" semantics. A formatter is only attempted once it
---- both resolves to something executable and its condition (if any) passes.
+--- Runs a format spec's formatter list against `lines`. A formatter is only
+--- attempted when it resolves to an executable and its condition (if any)
+--- passes. See mars.FormatSpec for "first" vs "chain" semantics.
 ---@param spec mars.FormatSpec
 ---@param buf integer
 ---@param root string
@@ -205,10 +195,7 @@ local function run_spec(spec, buf, root, lines, filename)
   return true, current, applied, nil
 end
 
---- Formats a buffer in place: resolves the applicable formatter(s) for its
---- filetype, runs them, and (only if the buffer wasn't modified while they
---- were running and the result actually differs) replaces its content in a
---- single change, preserving the cursor position.
+--- Format a buffer in place. Skips if it changed mid-run or output is identical.
 ---@param buf? integer Defaults to the current buffer
 function M.format(buf)
   buf = buf or vim.api.nvim_get_current_buf()

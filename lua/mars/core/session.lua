@@ -1,25 +1,18 @@
--- Session save/restore built on :mksession, keyed to the working
--- directory so each project gets its own session file. Saving happens
--- automatically on exit; restoring is always an explicit action
--- (:MarsSessionRestore/:MarsSessionRestoreLast/:MarsSessionList, or their
--- keymaps below); silently reopening buffers on startup would be
--- surprising, so this module never does that on its own.
+-- Session save/restore on :mksession, keyed to the working directory.
+-- Saving runs automatically on exit; restoring is always explicit
+-- (:MarsSessionRestore/RestoreLast/List or their keymaps); silently
+-- reopening buffers on startup would be surprising.
 
 local M = {}
 
 local session_dir = vim.fs.joinpath(vim.fn.stdpath("state"), "sessions")
 
---- Narrower than a do-everything sessionoptions: buffer list, working
---- directory, tab/window layout, sizing, and folds are worth restoring.
---- Blank/empty windows, terminal buffers, and help windows don't survive a
---- restore usefully, so they're deliberately left out rather than dragged
---- along.
+--- Worth restoring: buffer list, cwd, tab/window layout, sizing, folds.
+--- Blank/empty windows, terminals, and help windows are left out.
 local SESSION_OPTIONS = "buffers,curdir,folds,tabpages,winsize"
 
---- Percent-encodes everything outside a safe alphanumeric core, so path
---- separators, spaces, colons, and any other filesystem-hostile byte in a
---- cwd round-trip losslessly into one flat filename instead of being
---- guessed at case by case.
+--- Percent-encodes anything outside a safe alphanumeric core, so path
+--- separators, spaces, and colons round-trip losslessly into one filename.
 ---@param str string
 ---@return string
 local function encode(str)
@@ -28,8 +21,7 @@ local function encode(str)
   end))
 end
 
---- Reverses `encode`, so a session filename can be shown back to the user
---- as the directory it belongs to.
+--- Reverses `encode`, so a session filename shows the directory it belongs to.
 ---@param str string
 ---@return string
 local function decode(str)
@@ -44,12 +36,10 @@ local function session_path(cwd)
   return vim.fs.joinpath(session_dir, encode(cwd or vim.uv.cwd()) .. ".vim")
 end
 
---- Whether the current window/buffer state is worth persisting. Skips runs
---- started with explicit file arguments; an ad hoc `nvim somefile` edit
---- shouldn't silently overwrite that directory's real project session with
---- just that one file, and skips runs where no listed buffer has both a
---- name and a normal buftype, which covers an empty scratch buffer and a
---- buftype=nofile landing screen (e.g. a dashboard) alike.
+--- Whether the current run is worth persisting: skips runs started with
+--- explicit file args (an ad hoc `nvim somefile` shouldn't overwrite that
+--- directory's session) and runs with no listed, named, normal buffer
+--- (scratch or a nofile landing screen).
 ---@return boolean
 local function worth_saving()
   if vim.fn.argc(-1) > 0 then
@@ -69,17 +59,15 @@ end
 
 local skip_save = false
 
---- Marks the current instance as not-to-be-saved on exit. Exposed as
---- :MarsSessionStop for one-off runs (a quick peek at a directory, scratch
---- exploration) that shouldn't clobber that directory's saved session.
+--- Marks this instance as not-to-be-saved on exit (:MarsSessionStop), for
+--- one-off runs that shouldn't clobber a directory's saved session.
 function M.stop()
   skip_save = true
 end
 
---- Writes the session file for the current directory. Creates the session
---- directory on demand and notifies rather than raising if the write fails,
---- since this runs from VimLeavePre where an uncaught error would abort
---- quitting.
+--- Writes the session file for the current directory, creating the dir on
+--- demand. Notifies rather than raising, since this runs from VimLeavePre
+--- where an uncaught error would abort quitting.
 function M.save()
   if vim.fn.isdirectory(session_dir) == 0 then
     vim.fn.mkdir(session_dir, "p")
@@ -116,8 +104,8 @@ local function saved_sessions()
   return vim.fn.glob(vim.fs.joinpath(session_dir, "*.vim"), true, true)
 end
 
---- Restores whichever saved session was written to most recently,
---- regardless of which directory it belongs to.
+--- Restores whichever session was written most recently, regardless of
+--- which directory it belongs to.
 function M.restore_last()
   local files = saved_sessions()
   if #files == 0 then
@@ -135,8 +123,8 @@ function M.restore_last()
   end
 end
 
---- Presents every saved session as a `vim.ui.select` menu, decoded back to
---- the directory it belongs to, and restores whichever one is chosen.
+--- Presents every saved session as a `vim.ui.select` menu (decoded back to
+--- its directory) and restores the chosen one.
 function M.list()
   local files = saved_sessions()
   if #files == 0 then

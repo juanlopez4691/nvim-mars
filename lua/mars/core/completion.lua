@@ -1,12 +1,6 @@
--- Native completion via vim.lsp.completion (Neovim >= 0.11), buffer-word
--- matching, and path expansion. No completion plugin; see AGENTS.md's
--- Native-First Philosophy.
---
--- Covers, top to bottom: popup keymaps, item decoration (kind icon, [LSP]
--- label, kind tint), documentation-window styling (padding, border, wrap),
--- ghost-text preview, and LSP activation. The menu border comes from
--- 'pumborder', applied centrally by lua/mars/ui/borders.lua; pumwidth/
--- pumheight are in options.lua.
+-- Native completion (vim.lsp.completion), buffer-word matching, and path
+-- expansion. Menu border comes from 'pumborder' (lua/mars/ui/borders.lua);
+-- pumwidth/pumheight live in options.lua.
 
 local M = {}
 
@@ -19,12 +13,9 @@ vim.cmd([[
   inoremap <expr> <CR>    pumvisible() ? "\<C-y>" : "\<CR>"
 ]])
 
--- <C-f>/<C-b> scroll the documentation preview window one page down/up when
--- the menu is open (blink.cmp-style); otherwise the keys keep their default
--- insert-mode behavior. The scroll is deferred: changing another window is
--- forbidden (E523) while an insert-mode expr mapping is being evaluated with
--- the menu open. These mappings are noremap, so the fallback result performs
--- the built-in action instead of recursing.
+-- <C-f>/<C-b> page the docs preview while the menu is open. Changing another
+-- window is forbidden (E523) during an insert-mode expr mapping, so the
+-- scroll is deferred. noremap so the fallback runs the built-in action.
 ---@param key string
 ---@param scroll_cmd string
 ---@return function
@@ -53,8 +44,7 @@ vim.keymap.set("i", "<C-b>", scroll_preview("<C-b>", "normal! \2"), { expr = tru
 
 -- Item decoration
 
--- Kind icons prefixing the label, gated on vim.g.have_nerd_font and read per
--- request (never cached), per AGENTS.md.
+-- Kind icons gated on vim.g.have_nerd_font, read per request (never cached).
 local KIND_ICONS = {
   Text = "󰉿",
   Method = "󰆧",
@@ -84,7 +74,7 @@ local KIND_ICONS = {
 }
 
 -- Kind-to-highlight map, tinting the label like colorful-menu does for
--- blink.cmp. Groups a scheme doesn't define render as plain text.
+-- blink.cmp. Undefined groups render as plain text.
 local KIND_HLGROUPS = {
   Method = "@function",
   Function = "@function",
@@ -130,8 +120,7 @@ local function convert_item(item)
     converted.kind = ""
   end
 
-  -- Core strikes through deprecated items via abbr_hlgroup; don't clobber
-  -- that with a kind tint.
+  -- Don't clobber core's deprecation strikethrough with a kind tint.
   if not (item.deprecated or vim.list_contains(item.tags or {}, DEPRECATED)) then
     converted.abbr_hlgroup = KIND_HLGROUPS[kind_name]
     converted.kind_hlgroup = KIND_HLGROUPS[kind_name]
@@ -142,21 +131,14 @@ end
 
 -- Documentation window styling
 
--- The documentation window shown next to the menu is the pum's preview
--- window. Neovim's C code creates it with an explicit border="none", and
--- 'pumborder' only covers the menu itself. Two creation paths, two hooks:
---
---   * Items with upfront documentation: the window appears on selection, so
---     a deferred CompleteChanged handler finds it via complete_info().
---   * Items whose docs arrive via completionItem/resolve: the window is
---     created later by vim.api.nvim__complete_set with no autocmd firing;
---     wrap it to style the window at creation time.
+-- The pum's preview window gets border="none" from Neovim's C code, and
+-- 'pumborder' only covers the menu. Two creation paths, two hooks: the
+-- CompleteChanged handler for upfront docs, and a nvim__complete_set wrap
+-- for docs arriving via completionItem/resolve (no autocmd fires).
 
---- Left-pads the preview buffer's content by one cell, matching the menu's
---- built-in item inset so docs don't touch the border. The buffer is
---- core-managed and 'modifiable'-locked, so unlock it briefly. Skips content
---- whose first line already starts with a space (i.e. already padded; the
---- buffer is reused across items and rewritten by the C code on each update).
+--- Left-pads the preview buffer by one cell to match the menu's item inset.
+--- The buffer is core-managed and 'modifiable'-locked, so unlock briefly.
+--- Skips content already padded (the buffer is reused across items).
 ---@param bufnr integer?
 local function pad_preview_buffer(bufnr)
   if not (bufnr and vim.api.nvim_buf_is_valid(bufnr)) then
@@ -187,24 +169,20 @@ local function border_preview_window(winid)
   end
   local cfg = vim.api.nvim_win_get_config(winid)
   local max_width = vim.o.columns - cfg.col - 2
-  -- "none" means unbordered, not "already styled". When freshly bordering,
-  -- widen by one cell to make room for the left padding; when the C code
-  -- later resizes the window (border kept), only clamp. The C code sizes the
-  -- borderless window to fit the screen exactly; with a border on, that
-  -- overflows and gets clipped.
+  -- "none" means unbordered, not "already styled". Freshly bordering widens
+  -- by one cell for the left padding; later C-code resizes only get clamped.
   if not cfg.border or cfg.border == "none" then
     cfg.border = require("mars.ui.borders").style()
     cfg.width = math.min(cfg.width + 1, math.max(1, max_width))
   elseif cfg.width > max_width then
     cfg.width = math.max(1, max_width)
   end
-  -- Bump above the pum's own zindex (50) so the menu's scrollbar, drawn at
-  -- the shared edge, can't overwrite the preview's left border.
+  -- Bump above the pum's zindex (50) so its scrollbar can't overwrite the
+  -- preview's left border.
   cfg.zindex = 51
   vim.api.nvim_win_set_config(winid, cfg)
 
-  -- Wrap at word boundaries and align continuation lines with the padded
-  -- text (breakindent respects the leading pad) instead of the window edge.
+  -- Wrap at word boundaries, aligning continuation lines with the padded text.
   vim.wo[winid].breakindent = true
   vim.wo[winid].linebreak = true
 end
@@ -218,8 +196,7 @@ local function style_preview_window(winid, bufnr)
   border_preview_window(winid)
 end
 
--- Both hooks pcall the styling: a cosmetic failure must never break
--- completion itself.
+-- pcall: a cosmetic failure must never break completion.
 vim.api.nvim_create_autocmd("CompleteChanged", {
   callback = function()
     vim.schedule(function()
@@ -243,10 +220,8 @@ end
 
 -- Ghost-text preview
 
--- 'completeopt' includes noselect, so selecting an item in the menu never
--- touches the buffer on its own (unlike the classic pum behavior); this
--- fills that gap with a dimmed inline preview of the rest of the selected
--- item's text, the way blink.cmp/nvim-cmp show ghost text.
+-- With 'noselect', menu selection never touches the buffer; show the rest of
+-- the selected item's text as dimmed ghost text instead.
 vim.api.nvim_set_hl(0, "MarsCompletionGhostText", { link = "Comment", default = true })
 
 local ghost_ns = vim.api.nvim_create_namespace("mars_completion_ghost_text")
@@ -256,8 +231,7 @@ local function clear_ghost_text()
   vim.api.nvim_buf_clear_namespace(0, ghost_ns, 0, -1)
 end
 
---- The identifier characters immediately before the cursor, the text the
---- completion menu is actually matching against.
+--- The identifier characters before the cursor (what the menu matches).
 ---@return string
 local function typed_prefix()
   local col = vim.fn.col(".")
@@ -265,11 +239,9 @@ local function typed_prefix()
   return line:sub(1, col - 1):match("[%w_]*$") or ""
 end
 
---- Renders `word`'s remaining suffix (beyond what's already typed) as
---- inline virtual text right at the cursor. Skipped when `word` isn't a
---- literal continuation of the typed text; under 'fuzzy' matching a
---- selected item doesn't always share a literal prefix with it, and a
---- suffix computed from a non-prefix match would preview the wrong text.
+--- Renders `word`'s untyped suffix as inline virtual text at the cursor.
+--- Skipped when `word` isn't a literal continuation of the typed text:
+--- under 'fuzzy' matching a non-prefix item would preview the wrong text.
 ---@param word string?
 local function show_ghost_text(word)
   clear_ghost_text()
@@ -317,9 +289,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
 -- Public API
 
---- Navigates to the next completion item when the popup is visible.
---- Called by lua/mars/lang/snippets.lua to chain completion navigation
---- before its literal-Tab fallback.
+--- Selects the next completion item when the popup is visible. Called by
+--- lua/mars/lang/snippets.lua before its literal-Tab fallback.
 ---@return boolean true if the popup was visible and navigation was performed
 function M.pum_tab()
   if vim.fn.pumvisible() ~= 1 then

@@ -1,26 +1,19 @@
--- Native diagnostics for filetypes that need an external linter run outside
--- the LSP protocol, plus a manual :Lint command. Diagnostics for JS/TS/Vue/
--- etc are intentionally NOT handled here: lsp/eslint.lua already attaches
--- vscode-eslint-language-server (see lua/mars/core/lsp.lua, which enables
--- every lsp/*.lua config) and publishes ESLint diagnostics over LSP. Adding
--- a CLI eslint runner here would just duplicate that; don't.
+-- Native diagnostics for filetypes needing a CLI linter outside the LSP
+-- protocol, plus a manual :Lint command. JS/TS/Vue are intentionally absent:
+-- lsp/eslint.lua already publishes ESLint diagnostics over LSP, so a CLI
+-- runner here would just duplicate that.
 
 local tools = require("mars.lang.tools")
 
 local M = {}
 
---- Own namespace so these diagnostics never fight LSP-published ones (they
---- get merged for display, but each source can be cleared independently).
+--- Own namespace so these diagnostics stay independent of LSP-published ones.
 local ns = vim.api.nvim_create_namespace("mars_lint")
 
 --- Parses a phpcs `--report=json` payload into vim.diagnostic items.
----
---- phpcs occasionally writes PHP deprecation/warning lines to stdout ahead
---- of the JSON report (e.g. from a misbehaving sniff); anything before the
---- first "{" is discarded before decoding so that noise doesn't break the
---- parse. Line/column are converted from phpcs's 1-indexed values to
---- Neovim's 0-indexed ones, and phpcs's ERROR/WARNING message type maps to
---- vim.diagnostic.severity.
+--- phpcs may write deprecation noise to stdout ahead of the JSON report, so
+--- anything before the first "{" is discarded; line/column are converted
+--- from phpcs's 1-indexed values and ERROR/WARNING maps to severity.
 ---@param output string Raw phpcs stdout
 ---@return vim.Diagnostic[]
 function M.parse_phpcs(output)
@@ -53,9 +46,9 @@ function M.parse_phpcs(output)
   return diagnostics
 end
 
---- Parses a phpstan `--error-format=json` payload into vim.diagnostic
---- items. phpstan only reports errors (no separate warning tier) and
---- doesn't report columns, so every item lands at column 0.
+--- Parses a phpstan `--error-format=json` payload into vim.diagnostic items.
+--- phpstan reports only errors (no warning tier) and no columns, so items
+--- land at column 0.
 ---@param output string Raw phpstan stdout
 ---@return vim.Diagnostic[]
 local function parse_phpstan(output)
@@ -87,10 +80,9 @@ end
 ---@field cmd fun(filename: string): string[] Builds the full command
 ---@field parse fun(output: string): vim.Diagnostic[]
 
---- Picks PHP's linters for one buffer: phpstan joins in when the project has
---- a phpstan config, and phpcs joins in only when Laravel Pint is ABSENT
---- (Pint already enforces style, so phpcs would just be a second, redundant
---- opinion on the same thing).
+--- Picks PHP's linters for one buffer: phpstan joins in when a phpstan
+--- config exists, and phpcs joins in only when Laravel Pint is absent
+--- (Pint already enforces style, so phpcs would be redundant).
 ---@param buf integer
 ---@param root string
 ---@return mars.Linter[]
@@ -166,9 +158,8 @@ local function run_linter(buf, linter, filename)
   end
 
   vim.system(cmd, { stdin = input, text = true, cwd = linter.cwd }, function(result)
-    -- vim.system's callback runs in a fast event context, where API calls
-    -- like nvim_buf_is_valid are illegal; the whole body has to be
-    -- deferred, not just the part that sets diagnostics.
+    -- vim.system callbacks run in a fast-event context where API calls are
+    -- illegal, so the whole body has to be deferred, not just the set call.
     vim.schedule(function()
       if not vim.api.nvim_buf_is_valid(buf) then
         return
@@ -179,8 +170,8 @@ local function run_linter(buf, linter, filename)
   end)
 end
 
---- Runs every applicable linter for a buffer's filetype. Safe to call
---- directly (used by :Lint); the autocmds below debounce their own calls.
+--- Runs every applicable linter for a buffer's filetype. The autocmds below
+--- debounce their own calls.
 ---@param buf? integer Defaults to the current buffer
 function M.lint(buf)
   buf = buf or vim.api.nvim_get_current_buf()
