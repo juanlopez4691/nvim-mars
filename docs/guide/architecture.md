@@ -43,8 +43,8 @@ lazy-loading of its own, so `lua/mars/pack.lua` adds a thin wrapper:
 
 - **`M.add(specs)`** installs a plugin and makes it `require()`-able
   without running its `plugin/`/`ftdetect/` scripts (`load = false`).
-- **`M.on(opts)`** defers a plugin's own `setup()` call until an `event`,
-  `ft`, or `cmd` trigger fires, at most once.
+- **`M.on(opts)`** defers a plugin's own `setup()` call until an `event`
+  or `ft` trigger fires, at most once.
 
 Not every plugin uses `M.on()` the same way: `fzf-lua` defers to first
 keymap press, `blade-nav.nvim` is fully self-initializing via its own

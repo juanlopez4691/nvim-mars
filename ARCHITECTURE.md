@@ -217,9 +217,9 @@ list is already reviewed by editing this config file: unlike
 *changes* is genuinely useful.
 
 **`M.on(opts)`**: defers `opts.config()` (typically a
-`require("plugin").setup(...)` call) until one of `opts.event`,
-`opts.ft`, or `opts.cmd` fires, running the callback at most once via an
-internal `done` guard. What actually costs boot time isn't registering a
+`require("plugin").setup(...)` call) until one of `opts.event` or
+`opts.ft` fires, running the callback at most once via an internal
+`done` guard. What actually costs boot time isn't registering a
 plugin with `vim.pack`, it's calling that plugin's own `setup()`; `M.on()`
 is what defers *that*.
 
@@ -230,9 +230,9 @@ each file picks whatever lazy trigger actually fits that plugin:
 | --- | --- | --- |
 | `gitsigns.lua` | `event = {"BufReadPre", "BufNewFile"}` | Configures on first buffer read. |
 | `which-key.lua` | `event = "VimEnter"` | |
-| `mason.lua` | `event = "VimEnter"` | Also exposes `:MarsMasonInstall`, guarded by its own `mason_ready` flag rather than `M.on`'s `cmd` trigger, since that command is first-party, not the plugin's own. |
+| `mason.lua` | `event = "VimEnter"` | Also exposes `:MarsMasonInstall`, guarded by its own `mason_ready` flag, since that command is first-party, not the plugin's own. |
 | `laravel.lua` | `ft = {"php", "blade"}` | The `ft` trigger only fires once, so the actual Laravel-project check (`artisan` present) happens *inside* `config()`; a `php`/`blade` buffer opened outside a Laravel project doesn't burn the trigger; keymaps still load laravel.nvim on demand the first time one is used later in the session. |
-| `fzf-lua.lua` | none (no `M.on` call) | No single natural event/ft/cmd fits a picker. Instead each keymap wraps a local `use()` helper that calls `fzf-lua`'s own `setup()` the first time any picker keymap is actually pressed, guarded by a local `is_setup` flag. |
+| `fzf-lua.lua` | none (no `M.on` call) | No single natural event/filetype trigger fits a picker. Instead each keymap wraps a local `use()` helper that calls `fzf-lua`'s own `setup()` the first time any picker keymap is actually pressed, guarded by a local `is_setup` flag. |
 | `treesitter.lua` | none (configured eagerly, right after `M.add`) | nvim-treesitter (main branch) doesn't support lazy-loading per its own README. |
 | `blade-nav.lua` | none (only `M.add` + a config global) | Fully self-initializing: its own `ftplugin/{php,blade,vue}` scripts run automatically the moment a matching buffer opens: `load = false` still lets `ftplugin/` fire; only `plugin/` and `ftdetect/` are skipped. Mars only installs it and pre-sets `vim.g.blade_nav`. |
 
