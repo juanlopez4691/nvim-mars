@@ -54,14 +54,8 @@ local filetypes = {
 
 vim.api.nvim_create_autocmd("FileType", {
   pattern = filetypes,
-  callback = function()
-    vim.treesitter.start()
-  end,
-})
-
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = filetypes,
   callback = function(ev)
+    vim.treesitter.start()
     if vim.treesitter.query.get(ev.match, "indents") then
       vim.bo[ev.buf].indentexpr = "v:lua.vim.treesitter.indentexpr()"
     end
