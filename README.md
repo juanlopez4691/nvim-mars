@@ -104,6 +104,7 @@ lua/mars/
 ├── ui/                  # Statusline, winbar, dashboard, notify; zero plugin dependencies
 ├── lang/                # Per-language modules (php, laravel, blade, twig, format, lint, ...)
 ├── plugins/              # One file per external plugin (vim.pack.add + config)
+├── helpers/             # Shared on-demand helpers (debounce, color, popup, term, text)
 ├── pack.lua             # Lazy-load wrapper around vim.pack
 └── health.lua            # :checkhealth mars
 ```

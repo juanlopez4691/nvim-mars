@@ -16,6 +16,7 @@ lua/mars/
 ├── ui/                   # Statusline, winbar, dashboard, notify, patterns, colorscheme
 ├── lang/                 # Formatting, linting, snippets, tool resolution, blade/antlers filetypes
 ├── plugins/               # One file per external plugin (vim.pack.add + config)
+├── helpers/              # Shared on-demand helpers (debounce, color, popup, term, text)
 ├── pack.lua              # Lazy-load wrapper around vim.pack
 ├── health.lua             # :checkhealth mars
 └── local.lua.example     # Template for the gitignored lua/mars/local.lua
@@ -26,9 +27,12 @@ lua/mars/
 `init.lua` sets `mapleader`/`maplocalleader`, then auto-loads four
 directories in order, `core`, `plugins`, `ui`, `lang`, via a small
 `require_dir` helper that scans `'runtimepath'` and requires every module in
-alphabetical order. `lua/mars/local.lua` (gitignored, user-specific) is
-required last via `pcall`, after everything else, so it can override any
-option, global, keymap, or plugin config without producing a tracked diff.
+alphabetical order. `lua/mars/helpers/` is not auto-loaded: those shared
+modules are required explicitly, on demand, by whichever
+core/ui/lang/plugin module needs them. `lua/mars/local.lua` (gitignored,
+user-specific) is required last via `pcall`, after everything else, so it
+can override any option, global, keymap, or plugin config without producing
+a tracked diff.
 
 `lsp/*.lua` files are a separate mechanism: Mars never `require()`s them
 directly. `lua/mars/core/lsp.lua` scans the runtime path for every
@@ -69,9 +73,10 @@ grows rather than becoming stale prose.
 ## Known gaps
 
 ARCHITECTURE.md is intentionally honest about where the current tree hasn't
-caught up to AGENTS.md's target shape yet: for example, `nvim-dap` and
-`opencode.nvim` are approved exceptions with reserved keymap namespaces but
-no `plugins/*.lua` file yet at the time of writing. See its
+caught up to AGENTS.md's target shape yet: the dedicated
+`core/keymaps/`/`core/autocmds/` subdirectories, for example, are described
+in AGENTS.md but don't exist (keymaps and autocmds are colocated with the
+feature module that owns them). See its
 [Gaps section](https://github.com/joanlopez/nvim-mars/blob/main/ARCHITECTURE.md#gaps-between-agentsmd-and-the-current-tree)
 for the current list.
 

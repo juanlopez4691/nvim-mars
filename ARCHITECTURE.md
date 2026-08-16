@@ -22,6 +22,7 @@ lua/mars/
 ├── ui/                  # Statusline, winbar, dashboard, notify, patterns, colorscheme
 ├── lang/                # Formatting, linting, snippets, tool resolution, blade/antlers filetype setup
 ├── plugins/              # One file per external plugin (vim.pack.add + config)
+├── helpers/             # Shared on-demand helpers (debounce, color, popup, term, text)
 ├── pack.lua             # Lazy-load wrapper around vim.pack
 ├── health.lua            # :checkhealth mars
 └── local.lua.example    # Template for the gitignored lua/mars/local.lua
@@ -57,8 +58,9 @@ Today this holds: `options.lua` (editor options, plus the
 config), `completion.lua` (native `vim.lsp.completion`), `diagnostics.lua`
 (diagnostic display config, plus quickfix/location-list commands and
 keymaps), `netrw.lua` (netrw restyled as a tree-view sidebar), `session.lua`
-(`:mksession`-based per-directory session save/restore), and `lazygit.lua`
-(a centered floating `lazygit` terminal with `nvim-remote` edit wiring).
+(`:mksession`-based per-directory session save/restore), `lazygit.lua`
+(a centered floating `lazygit` terminal with `nvim-remote` edit wiring), and
+`dap.lua` (the `<leader>d` debug keymaps driving nvim-dap).
 
 Each module owns both the keymaps and autocmds for the feature it
 implements, colocated with the logic; for example `lazygit.lua` defines
@@ -73,8 +75,8 @@ what's on disk right now (see [Gaps](#gaps-between-agentsmd-and-the-current-tree
 
 `statusline.lua` and `winbar.lua` (expression-based `vim.o.statusline` /
 `vim.o.winbar`, each resolving the target window via
-`g:statusline_winid`), `dashboard.lua` (native `VimEnter` start screen,
-degrading gracefully when fzf-lua/session/Mason aren't available),
+`g:statusline_winid`), `dashboard.lua` (a native `VimEnter` start screen
+whose picker actions route through `plugins/fzf-lua.lua`'s shared wrapper),
 `notify.lua` (a `vim.notify` replacement rendering stacked floating
 windows, top-right, auto-dismissing per severity), `patterns.lua`
 (extmark-based TODO/FIXME/HACK/WARN/NOTE/PERF comment highlighting plus hex
@@ -106,11 +108,23 @@ their `lsp/*.lua` config (`intelephense.lua`, `twiggy_language_server.lua`,
 
 ### `lua/mars/plugins/`: one file per external plugin
 
-`blade-nav.lua`, `fzf-lua.lua`, `gitsigns.lua`, `laravel.lua`, `mason.lua`,
-`treesitter.lua`, `which-key.lua`. Each calls
+`blade-nav.lua`, `dap.lua`, `dap-lua.lua`, `dap-php.lua`, `fzf-lua.lua`,
+`gitsigns.lua`, `laravel.lua`, `mason.lua`, `opencode.lua`, `treesitter.lua`,
+`which-key.lua`. Each calls
 `require("mars.pack").add({...})` to register its plugin(s), then either
 configures eagerly or defers via `require("mars.pack").on({...})`: see
 [The vim.pack Lazy-Load Wrapper](#the-vimpack-lazy-load-wrapper).
+
+### `lua/mars/helpers/`
+
+Shared modules with no feature of their own, required on demand by any
+`core`/`ui`/`lang`/`plugins` module that needs them. Today: `debounce.lua`
+(a per-key debounce used by the indent-guide/pattern redraws and lint),
+`color.lua` (WCAG-readable foreground picked for a hex background),
+`popup.lua` (a centered, dismissible read-only float), `term.lua` (the
+floating-terminal lifecycle shared by lazygit, scooter, and opencode), and
+`text.lua` (display-width truncation and `%`-escaping for the statusline/
+winbar/notify/diagnostics renderers). None are auto-loaded by `require_dir`.
 
 ### `lua/mars/pack.lua`
 
@@ -160,14 +174,17 @@ category is introduced.
 `ui`, `lang`. The order matters; `core` establishes options, the LSP
 enable list, and diagnostics config before anything else runs; `plugins`
 registers every `vim.pack` spec (and, for the eager ones, configures them)
-before `ui`/`lang` modules that might assume a plugin is already
-`require()`-able (e.g. `dashboard.lua` probing `vim.pack.get()` for
-`fzf-lua`).
+before `ui`/`lang` modules that might delegate to a plugin's wrapper at load
+time (e.g. `ui/dashboard.lua` routing its picker actions through
+`plugins/fzf-lua.lua`).
 
 What is **not** covered by `require_dir` and is loaded a different way:
 
 - `lsp/*.lua`: never manually required by Mars code at all; see
   [LSP Activation](#lsp-activation).
+- `lua/mars/helpers/*.lua`: required explicitly, on demand, by whichever
+  module needs them (`require("mars.helpers.debounce")`,
+  `require("mars.helpers.text")`, ...), never auto-loaded.
 - `lua/mars/pack.lua` and `lua/mars/health.lua`: required explicitly by
   whatever consumes them (`require("mars.pack")` from any `plugins/*.lua`
   file; `require("mars.health")` by Neovim's own `:checkhealth`
@@ -252,10 +269,10 @@ declined in favor of a native module, with the module that replaced each.
 | `fzf-lua` | Fuzzy file/grep/buffer/symbol picker; no native fuzzy-match UI exists. | Installed (`plugins/fzf-lua.lua`); files/live-grep/buffers/oldfiles under `<leader>f*`, git status/commits/branches under `<leader>g{s,c,b}`, LSP document/workspace symbols under `<leader>c{s,S,w}`. Also the picker backend for `dashboard.lua` and laravel.nvim. |
 | `gitsigns.nvim` | Git gutter signs, staging, blame; nontrivial diff-parsing and debounced rendering. | Installed (`plugins/gitsigns.lua`); hunk stage/reset/preview/nav, buffer stage/reset, line/toggle blame, `diffthis`, all under `<leader>gh*` and `]h`/`[h`. |
 | `which-key.nvim` | Leader-key hint popup and group labels; no native equivalent. | Installed (`plugins/which-key.lua`); declares the `<leader>{a,c,d,f,g,l,o,q,r,s,t,y}` group labels. |
-| `mason.nvim` | Cross-platform external tool/binary installer. | Installed (`plugins/mason.lua`); a small first-party `ensure_tools()` (currently `taplo`, `json-lsp`) stands in for `mason-tool-installer`; no `mason-lspconfig`; servers are wired natively via `vim.lsp.enable`. |
+| `mason.nvim` | Cross-platform external tool/binary installer. | Installed (`plugins/mason.lua`); a small first-party `ensure_tools()` (intelephense, phpstan, phpcs, phpcbf, php-cs-fixer, pint, prettierd, vtsls, blade-formatter, and the rest of the language toolchain, exposed as `:MarsMasonInstall`) stands in for `mason-tool-installer`; no `mason-lspconfig`; servers are wired natively via `vim.lsp.enable`. |
 | `nvim-treesitter` (main) | Parser install/update only; highlighting/folding stays native. | Installed (`plugins/treesitter.lua`); installs parsers, starts `vim.treesitter.*` highlighting per filetype, and wires `foldexpr` to treesitter with an LSP-folding upgrade on `LspAttach` when a client supports it. |
-| `nvim-dap` + `nvim-dap-ui` + `nvim-dap-virtual-text` + `mason-nvim-dap` | Debugging is the explicit "complex, worth a plugin" case. | **Approved, not yet added**; no `plugins/dap*.lua` file exists in the repo yet; the `<leader>d` keymap namespace is reserved for it in README's namespace table but unused today. |
-| `opencode.nvim` | AI chat/agent integration; the sole AI surface. | **Approved, not yet added**; no `plugins/opencode.lua` file yet; `<leader>a`/`<leader>o` are reserved namespaces, also unused today. |
+| `nvim-dap` + `nvim-dap-ui` + `nvim-dap-virtual-text` + `mason-nvim-dap` | Debugging is the explicit "complex, worth a plugin" case. | Installed; `plugins/dap.lua` (the stack + gutter signs + dap-ui listeners), `plugins/dap-php.lua` (Xdebug adapter and launch configs, skipped when `.vscode/launch.json` exists), `plugins/dap-lua.lua` (osv adapter for Neovim's own Lua, lazy-loaded on `lua`), and `core/dap.lua` with the `<leader>d` debug keymaps. |
+| `opencode.nvim` | AI chat/agent integration; the sole AI surface. | Installed (`plugins/opencode.lua`); a right-split terminal running `opencode --port`, plus ask/prompt/operator/scroll action keymaps under `<leader>o*` (`go`/`goo` alongside). |
 | `adalessa/laravel.nvim` | Laravel-specific pickers/commands, upstream. | Installed (`plugins/laravel.lua`); Artisan/routes/make/resources pickers, Actions/Hub/Command Center, and a resource-aware `gf` fallback under `<leader>l*`. Pulls in `nui.nvim`, `plenary.nvim`, and `nvim-nio` solely as laravel.nvim's own hard runtime deps; not a general invitation to reach for them elsewhere. |
 | `blade-nav.nvim` | Blade tag-completion / navigation source. | Installed (`plugins/blade-nav.lua`); `gf` navigation and inline annotations (routes, views, config/env values, directives, Livewire, Inertia, translations) for Laravel projects, entirely self-initializing via its own `ftplugin` scripts. |
 
@@ -296,9 +313,6 @@ repo exactly yet. Documented here rather than silently papered over:
   languages are covered by their `lsp/*.lua` config plus the shared
   `format`/`lint`/`snippets`/`tools` modules instead of a dedicated file
   per language.
-- **`nvim-dap` stack and `opencode.nvim`**: both are approved exception
-  plugins with reserved keymap namespaces (`<leader>d`, `<leader>a`/
-  `<leader>o`), but neither has a `plugins/*.lua` file yet.
 
 None of this is a defect to fix as part of writing this document: it's the
 honest current state, kept here so this file doesn't silently drift from
