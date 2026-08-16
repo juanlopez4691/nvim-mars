@@ -10,7 +10,6 @@ local group = vim.api.nvim_create_augroup("mars_indent", { clear = true })
 
 -- Buffers larger than this are skipped entirely rather than scanned.
 local max_bytes = 1024 * 1024
-local debounce_ms = 100
 
 -- Lines fetched around the visible range so a blank line at its edge can
 -- still infer its guide depth from the nearest non-blank neighbour.
@@ -20,6 +19,8 @@ local context_pad = 50
 -- lines producing an unbounded number of extmarks.
 local max_levels = 64
 
+local debounce = require("mars.debounce")
+
 --- Buftypes that mark a window as plugin UI, never worth drawing guides in.
 local UI_BUFTYPES = {
   help = true,
@@ -28,10 +29,6 @@ local UI_BUFTYPES = {
   quickfix = true,
   terminal = true,
 }
-
---- Pending debounce generation per window; a redraw only runs if its
---- generation is still the latest requested for that window.
-local pending = {} ---@type table<integer, integer>
 
 --- (Re)defines the indent-guide highlights: a dim group for ordinary
 --- guides, a brighter one for the cursor's Treesitter scope. Reapplied on
@@ -229,19 +226,6 @@ function M.refresh(winid)
   end
 end
 
---- Debounces a redraw for a window: bursts of events within `debounce_ms`
---- collapse into a single scan of the last-requested state.
----@param winid integer
-local function schedule_refresh(winid)
-  local generation = (pending[winid] or 0) + 1
-  pending[winid] = generation
-  vim.defer_fn(function()
-    if pending[winid] == generation then
-      M.refresh(winid)
-    end
-  end, debounce_ms)
-end
-
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = group,
   desc = "Reapply Mars indent-guide highlight groups after the colorscheme (re)loads",
@@ -263,7 +247,10 @@ vim.api.nvim_create_autocmd({
   group = group,
   desc = "Rescan indent guides and cursor scope for the current window",
   callback = function()
-    schedule_refresh(vim.api.nvim_get_current_win())
+    local winid = vim.api.nvim_get_current_win()
+    debounce.debounced(winid, function()
+      M.refresh(winid)
+    end)
   end,
 })
 
@@ -271,7 +258,7 @@ vim.api.nvim_create_autocmd("WinClosed", {
   group = group,
   desc = "Drop debounce bookkeeping for a closed window",
   callback = function(ev)
-    pending[tonumber(ev.match)] = nil
+    debounce.drop(tonumber(ev.match))
   end,
 })
 

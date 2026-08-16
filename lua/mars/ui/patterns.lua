@@ -9,7 +9,8 @@ local ns = vim.api.nvim_create_namespace("mars_patterns")
 
 -- Buffers larger than this are skipped entirely rather than scanned.
 local max_bytes = 1024 * 1024
-local debounce_ms = 100
+
+local debounce = require("mars.debounce")
 
 local keyword_groups = {
   TODO = "Todo",
@@ -23,10 +24,6 @@ local keyword_groups = {
 -- Per-colour highlight groups can't be predeclared, so one is created
 -- dynamically per distinct hex value and cached.
 local hex_group_cache = {} ---@type table<string, string>
-
---- Pending debounce generation per buffer; a scan only runs if its
---- generation is still the latest requested for that buffer.
-local pending = {} ---@type table<integer, integer>
 
 --- Relative luminance of an sRGB channel value (0-1), per the WCAG formula.
 ---@param channel number
@@ -245,19 +242,6 @@ function M.refresh(bufnr)
   scan_range(bufnr, first, last)
 end
 
---- Debounces a refresh for a buffer: bursts of events within `debounce_ms`
---- collapse into a single scan of the last-requested state.
----@param bufnr integer
-local function schedule_refresh(bufnr)
-  local generation = (pending[bufnr] or 0) + 1
-  pending[bufnr] = generation
-  vim.defer_fn(function()
-    if pending[bufnr] == generation then
-      M.refresh(bufnr)
-    end
-  end, debounce_ms)
-end
-
 local group = vim.api.nvim_create_augroup("mars_patterns", { clear = true })
 
 vim.api.nvim_create_autocmd(
@@ -266,7 +250,9 @@ vim.api.nvim_create_autocmd(
     group = group,
     desc = "Rescan visible pattern highlights for the current buffer",
     callback = function(ev)
-      schedule_refresh(ev.buf)
+      debounce.debounced(ev.buf, function()
+        M.refresh(ev.buf)
+      end)
     end,
   }
 )
@@ -275,7 +261,7 @@ vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
   group = group,
   desc = "Drop debounce bookkeeping for a deleted or wiped-out buffer",
   callback = function(ev)
-    pending[ev.buf] = nil
+    debounce.drop(ev.buf)
   end,
 })
 
