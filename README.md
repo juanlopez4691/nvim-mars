@@ -122,5 +122,5 @@ Project-local skills are available under `.agents/skills/`.
 | `:checkhealth`    | Run full Neovim health checks         |
 | `:MarsFormat`     | Format the current buffer             |
 | `:Lint`           | Run linter on the current buffer      |
-| `:Pack update`    | Update plugins (native vim.pack)      |
+| `:PackUpdate`     | Update plugins (native vim.pack)      |
 | `:source %`       | Reload current config file            |

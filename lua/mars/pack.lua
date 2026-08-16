@@ -25,4 +25,17 @@ function M.on(opts)
   end
 end
 
+--- Update installed plugins via vim.pack: fetches updates and opens a
+--- confirmation buffer (see `:help vim.pack`); `:write` confirms, `:quit`
+--- discards, then restart to use the new code. Optional args restrict the
+--- update to the named plugins.
+vim.api.nvim_create_user_command("PackUpdate", function(cmd)
+  local names = vim.split(vim.trim(cmd.args), "%s+", { trimempty = true })
+  if #names == 0 then
+    vim.pack.update()
+  else
+    vim.pack.update(names)
+  end
+end, { desc = "Update plugins (native vim.pack)", nargs = "*" })
+
 return M
