@@ -4,6 +4,13 @@
 
 local group = vim.api.nvim_create_augroup("mars_qol", { clear = true })
 
+-- Native `gx` desc is long; re-bind its handler with a short label. Capture
+-- the callback first, so the mapping reads the original, not itself.
+local native_gx = vim.fn.maparg("gx", "n", false, true).callback
+if native_gx then
+  vim.keymap.set({ "n", "x" }, "gx", native_gx, { desc = "Open File or Link" })
+end
+
 vim.api.nvim_create_autocmd("TextYankPost", {
   group = group,
   desc = "Flash-highlight the yanked text region",

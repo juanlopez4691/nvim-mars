@@ -341,25 +341,25 @@ vim.keymap.set(
   "n",
   "<leader>cq",
   "<cmd>MarsDiagnosticsWorkspace<cr>",
-  { silent = true, desc = "Code: workspace diagnostics to quickfix" }
+  { silent = true, desc = "Diagnostics to quickfix" }
 )
 vim.keymap.set(
   "n",
   "<leader>cQ",
   "<cmd>MarsDiagnosticsWorkspaceErrors<cr>",
-  { silent = true, desc = "Code: workspace errors to quickfix" }
+  { silent = true, desc = "Errors to quickfix" }
 )
 vim.keymap.set(
   "n",
   "<leader>cl",
   "<cmd>MarsDiagnosticsBuffer<cr>",
-  { silent = true, desc = "Code: buffer diagnostics to location list" }
+  { silent = true, desc = "Buffer diagnostics to loclist" }
 )
 vim.keymap.set(
   "n",
   "<leader>cL",
   "<cmd>MarsDiagnosticsBufferErrors<cr>",
-  { silent = true, desc = "Code: buffer errors to location list" }
+  { silent = true, desc = "Buffer errors to loclist" }
 )
 
 return M

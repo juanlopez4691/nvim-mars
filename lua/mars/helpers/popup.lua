@@ -46,8 +46,8 @@ function M.show(lines, opts)
       vim.api.nvim_win_close(win, true)
     end
   end
-  vim.keymap.set("n", "q", close, { buffer = buf })
-  vim.keymap.set("n", "<Esc>", close, { buffer = buf })
+  vim.keymap.set("n", "q", close, { buffer = buf, desc = "Popup: close" })
+  vim.keymap.set("n", "<Esc>", close, { buffer = buf, desc = "Popup: close" })
 end
 
 return M

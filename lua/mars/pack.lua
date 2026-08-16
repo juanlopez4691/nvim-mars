@@ -89,8 +89,8 @@ local function update_in_popup(names)
     pcall(vim.api.nvim_win_close, win, true)
     pcall(vim.api.nvim_buf_delete, confirm_buf, { force = true })
   end
-  vim.keymap.set("n", "q", cancel, { buffer = confirm_buf })
-  vim.keymap.set("n", "<Esc>", cancel, { buffer = confirm_buf })
+  vim.keymap.set("n", "q", cancel, { buffer = confirm_buf, desc = "Pack update: discard" })
+  vim.keymap.set("n", "<Esc>", cancel, { buffer = confirm_buf, desc = "Pack update: discard" })
 
   -- Fire the buffer's own BufWriteCmd directly: `:write` on an acwrite
   -- buffer with a buffer-local callback autocmd raises E676 in this Neovim

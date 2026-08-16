@@ -222,6 +222,6 @@ vim.api.nvim_create_user_command("MarsRenameFile", function()
   M.rename_file()
 end, { desc = "Rename the current file with LSP awareness" })
 
-vim.keymap.set("n", "<leader>cR", "<cmd>MarsRenameFile<cr>", { silent = true, desc = "Code: rename current file" })
+vim.keymap.set("n", "<leader>cR", "<cmd>MarsRenameFile<cr>", { silent = true, desc = "Rename File" })
 
 return M

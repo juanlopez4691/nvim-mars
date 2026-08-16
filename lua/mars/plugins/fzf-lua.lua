@@ -79,7 +79,7 @@ vim.keymap.set(
   use(function(fzf_lua)
     fzf_lua.files()
   end),
-  { silent = true, desc = "Find: files" }
+  { silent = true, desc = "Files" }
 )
 
 vim.keymap.set(
@@ -88,7 +88,7 @@ vim.keymap.set(
   use(function(fzf_lua)
     fzf_lua.live_grep()
   end),
-  { silent = true, desc = "Find: live grep" }
+  { silent = true, desc = "Live Grep" }
 )
 
 vim.keymap.set(
@@ -97,7 +97,7 @@ vim.keymap.set(
   use(function(fzf_lua)
     fzf_lua.buffers()
   end),
-  { silent = true, desc = "Find: buffers" }
+  { silent = true, desc = "Buffers" }
 )
 
 vim.keymap.set(
@@ -106,7 +106,7 @@ vim.keymap.set(
   use(function(fzf_lua)
     fzf_lua.oldfiles()
   end),
-  { silent = true, desc = "Find: recent files" }
+  { silent = true, desc = "Recent" }
 )
 
 -- Git
@@ -145,7 +145,7 @@ vim.keymap.set(
   use(function(fzf_lua)
     fzf_lua.builtin()
   end),
-  { silent = true, desc = "Find: all pickers" }
+  { silent = true, desc = "All Pickers" }
 )
 
 -- Grep word/selection; `sw` scopes to the project root, `sW` stays in the
@@ -328,7 +328,7 @@ vim.keymap.set(
   use(function(fzf_lua)
     fzf_lua.lsp_document_symbols()
   end),
-  { silent = true, desc = "Code: document symbols" }
+  { silent = true, desc = "Document Symbols" }
 )
 
 vim.keymap.set(
@@ -337,7 +337,7 @@ vim.keymap.set(
   use(function(fzf_lua)
     fzf_lua.lsp_document_symbols({ regex_filter = filter_symbol_kinds })
   end),
-  { silent = true, desc = "Code: document symbols (filtered)" }
+  { silent = true, desc = "Document Symbols (Filtered)" }
 )
 
 vim.keymap.set(
@@ -346,7 +346,7 @@ vim.keymap.set(
   use(function(fzf_lua)
     fzf_lua.lsp_live_workspace_symbols()
   end),
-  { silent = true, desc = "Code: workspace symbols" }
+  { silent = true, desc = "Workspace Symbols" }
 )
 
 return M

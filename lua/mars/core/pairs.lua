@@ -168,4 +168,4 @@ for quote in pairs(QUOTES) do
   end, { expr = true, desc = ("Pairs: auto-close/skip %s"):format(quote) })
 end
 
-vim.keymap.set("i", "<BS>", backspace, { expr = true, desc = "Pairs: delete an empty pair as a unit" })
+vim.keymap.set("i", "<BS>", backspace, { expr = true, desc = "Delete Empty Pair" })

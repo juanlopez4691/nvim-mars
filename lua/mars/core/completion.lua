@@ -14,10 +14,12 @@ vim.o.complete = ".,w,b,u,t,i,kspell"
 
 -- Keymaps
 
-vim.cmd([[
-  inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-  inoremap <expr> <CR>    pumvisible() ? "\<C-y>" : "\<CR>"
-]])
+vim.keymap.set("i", "<S-Tab>", function()
+  return vim.fn.pumvisible() == 1 and vim.keycode("<C-p>") or vim.keycode("<S-Tab>")
+end, { expr = true, desc = "Previous Item" })
+vim.keymap.set("i", "<CR>", function()
+  return vim.fn.pumvisible() == 1 and vim.keycode("<C-y>") or vim.keycode("<CR>")
+end, { expr = true, desc = "Accept Item" })
 
 -- <C-f>/<C-b> page the docs preview while the menu is open. Changing another
 -- window is forbidden (E523) during an insert-mode expr mapping, so the

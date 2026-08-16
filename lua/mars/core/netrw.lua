@@ -480,13 +480,13 @@ vim.api.nvim_create_autocmd("FileType", {
             open_in_split(false)
           end, {
             buffer = buf,
-            desc = "Explorer: open file in a horizontal split of the last active window",
+            desc = "Explorer: horizontal split (last window)",
           })
           vim.keymap.set("n", "v", function()
             open_in_split(true)
           end, {
             buffer = buf,
-            desc = "Explorer: open file in a vertical split of the last active window",
+            desc = "Explorer: vertical split (last window)",
           })
           if queued then
             return

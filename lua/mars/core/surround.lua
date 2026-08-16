@@ -282,7 +282,7 @@ vim.keymap.set("n", "ds", function()
   if ok and char ~= "" and char ~= "\27" then
     delete_surround(char)
   end
-end, { desc = "Surround: delete" })
+end, { desc = "Delete Surround" })
 
 vim.keymap.set("n", "cs", function()
   local ok, old = pcall(vim.fn.getcharstr)
@@ -293,12 +293,12 @@ vim.keymap.set("n", "cs", function()
   if ok2 and new_char ~= "" and new_char ~= "\27" then
     change_surround(old, new_char)
   end
-end, { desc = "Surround: change" })
+end, { desc = "Change Surround" })
 
 vim.keymap.set("n", "ys", function()
   vim.o.operatorfunc = "v:lua.require'mars.core.surround'.opfunc"
   return "g@"
-end, { expr = true, desc = "Surround: add around a motion" })
+end, { expr = true, desc = "Add Surround" })
 
 vim.keymap.set("n", "yss", function()
   local open_delim, close_delim = prompt_delimiters()
@@ -307,7 +307,7 @@ vim.keymap.set("n", "yss", function()
   end
   local row = vim.api.nvim_win_get_cursor(0)[1]
   wrap_linewise({ row, 0 }, { row, 0 }, open_delim, close_delim)
-end, { desc = "Surround: add around the current line" })
+end, { desc = "Surround Line" })
 
 vim.keymap.set("x", "S", function()
   local visual_mode = vim.fn.mode()
@@ -332,6 +332,6 @@ vim.keymap.set("x", "S", function()
   else
     wrap_charwise(start_pos, end_pos, open_delim, close_delim)
   end
-end, { desc = "Surround: add around the visual selection" })
+end, { desc = "Surround Selection" })
 
 return M

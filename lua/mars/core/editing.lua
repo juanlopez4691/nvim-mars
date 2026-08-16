@@ -18,5 +18,5 @@ vim.keymap.set(
 
 -- `<`/`>` in visual mode drop back to normal after one indent; reselect
 -- ("gv") to stay in visual mode.
-vim.keymap.set("x", "<", "<gv", { desc = "Indent selection left, staying in visual mode" })
-vim.keymap.set("x", ">", ">gv", { desc = "Indent selection right, staying in visual mode" })
+vim.keymap.set("x", "<", "<gv", { desc = "Indent Left (stay in visual)" })
+vim.keymap.set("x", ">", ">gv", { desc = "Indent Right (stay in visual)" })

@@ -70,8 +70,37 @@ vim.lsp.handlers["textDocument/signatureHelp"] = function(err, result, ctx, conf
   )
 end
 
+-- Native LSP defaults (see vim/_core/defaults.lua) carry code-string descs
+-- like "vim.lsp.buf.document_symbol()". Rebinding the same keys to the same
+-- functions with human-readable descs keeps the keys native while making
+-- which-key menus legible.
+vim.keymap.set({ "n", "x" }, "gra", vim.lsp.buf.code_action, { desc = "Code Action" })
+vim.keymap.set("n", "grr", vim.lsp.buf.references, { desc = "References" })
+vim.keymap.set("n", "gri", vim.lsp.buf.implementation, { desc = "Implementation" })
+vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { desc = "Type Definition" })
+vim.keymap.set("n", "grx", vim.lsp.codelens.run, { desc = "Run Codelens" })
+vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { desc = "Document Symbols" })
+vim.keymap.set({ "i", "s" }, "<C-S>", vim.lsp.buf.signature_help, { desc = "Signature Help" })
+
+-- `K` is bound buffer-locally by core only when an attached client supports
+-- hover and the buffer has no `keywordprg` of its own, so override it the
+-- same way (on LspAttach, capability- and keywordprg-guarded); rebinding a
+-- global `K` would hijack the key in non-LSP buffers.
 vim.api.nvim_create_autocmd("LspAttach", {
-  group = vim.api.nvim_create_augroup("mars_lsp_rename_keymap", { clear = true }),
+  group = vim.api.nvim_create_augroup("mars_lsp_hover_keymap", { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if
+      client
+      and client:supports_method(vim.lsp.protocol.Methods.textDocument_hover, args.buf)
+      and vim.bo[args.buf].keywordprg == ""
+    then
+      vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = args.buf, silent = true, desc = "Hover" })
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
     local client = vim.lsp.get_client_by_id(args.data.client_id)
     if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_rename, args.buf) then
