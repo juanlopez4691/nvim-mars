@@ -137,6 +137,190 @@ vim.keymap.set(
   { silent = true, desc = "Branches" }
 )
 
+-- Catch-all meta-picker: lists every registered fzf-lua picker as a fuzzable
+-- entry, so the rest of these keymaps are discoverable from one place.
+vim.keymap.set(
+  "n",
+  "<leader>fk",
+  use(function(fzf_lua)
+    fzf_lua.builtin()
+  end),
+  { silent = true, desc = "Find: all pickers" }
+)
+
+-- Grep word/selection; `sw` scopes to the project root, `sW` stays in the
+-- cwd. Normal mode greps the word under the cursor, visual mode the selection.
+local function project_root()
+  return vim.fs.root(0, ".git") or vim.uv.cwd()
+end
+
+vim.keymap.set(
+  "n",
+  "<leader>sw",
+  use(function(fzf_lua)
+    fzf_lua.grep_cword({ search_paths = { project_root() } })
+  end),
+  { silent = true, desc = "Grep word under cursor (root)" }
+)
+vim.keymap.set(
+  "x",
+  "<leader>sw",
+  use(function(fzf_lua)
+    fzf_lua.grep_visual({ search_paths = { project_root() } })
+  end),
+  { silent = true, desc = "Grep selection (root)" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>sW",
+  use(function(fzf_lua)
+    fzf_lua.grep_cword()
+  end),
+  { silent = true, desc = "Grep word under cursor (cwd)" }
+)
+vim.keymap.set(
+  "x",
+  "<leader>sW",
+  use(function(fzf_lua)
+    fzf_lua.grep_visual()
+  end),
+  { silent = true, desc = "Grep selection (cwd)" }
+)
+
+-- Grep open buffers: rg with `search_paths` fanned out to every named buffer.
+-- `sb` differs by matching open-buffer lines instead (fzf-lua's `lines`).
+local function grep_buffers()
+  local paths = {}
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    local name = vim.api.nvim_buf_get_name(buf)
+    if name ~= "" then
+      paths[#paths + 1] = name
+    end
+  end
+  return require("fzf-lua").grep({ search_paths = paths })
+end
+
+vim.keymap.set(
+  "n",
+  "<leader>sB",
+  use(function(_fzf_lua)
+    grep_buffers()
+  end),
+  { silent = true, desc = "Grep open buffers" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>sb",
+  use(function(fzf_lua)
+    fzf_lua.lines()
+  end),
+  { silent = true, desc = "Buffer lines" }
+)
+
+-- Command/search history
+vim.keymap.set(
+  "n",
+  "<leader>sc",
+  use(function(fzf_lua)
+    fzf_lua.command_history()
+  end),
+  { silent = true, desc = "Command history" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>s/",
+  use(function(fzf_lua)
+    fzf_lua.search_history()
+  end),
+  { silent = true, desc = "Search history" }
+)
+
+-- Help / man pages
+vim.keymap.set(
+  "n",
+  "<leader>sh",
+  use(function(fzf_lua)
+    fzf_lua.helptags()
+  end),
+  { silent = true, desc = "Help pages" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>sM",
+  use(function(fzf_lua)
+    fzf_lua.man_pages()
+  end),
+  { silent = true, desc = "Man pages" }
+)
+
+-- Registers / marks / jumps
+vim.keymap.set(
+  "n",
+  '<leader>s"',
+  use(function(fzf_lua)
+    fzf_lua.registers()
+  end),
+  { silent = true, desc = "Registers" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>sm",
+  use(function(fzf_lua)
+    fzf_lua.marks()
+  end),
+  { silent = true, desc = "Marks" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>sj",
+  use(function(fzf_lua)
+    fzf_lua.jumps()
+  end),
+  { silent = true, desc = "Jumps" }
+)
+
+-- Autocmds / commands / keymaps / resume / undo history
+vim.keymap.set(
+  "n",
+  "<leader>sa",
+  use(function(fzf_lua)
+    fzf_lua.autocmds()
+  end),
+  { silent = true, desc = "Autocmds" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>sC",
+  use(function(fzf_lua)
+    fzf_lua.commands()
+  end),
+  { silent = true, desc = "Commands" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>sk",
+  use(function(fzf_lua)
+    fzf_lua.keymaps()
+  end),
+  { silent = true, desc = "Keymaps" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>sR",
+  use(function(fzf_lua)
+    fzf_lua.resume()
+  end),
+  { silent = true, desc = "Resume last picker" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>su",
+  use(function(fzf_lua)
+    fzf_lua.undotree()
+  end),
+  { silent = true, desc = "Undo history" }
+)
+
 -- Code
 vim.keymap.set(
   "n",

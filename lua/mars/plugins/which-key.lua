@@ -81,7 +81,7 @@ require("mars.pack").on({
       group("<leader>o", "OpenCode"),
       group("<leader>q", "Session"),
       group("<leader>r", "Replace"),
-      group("<leader>s", "Search & replace"),
+      group("<leader>s", "Search"),
       group("<leader>t", "Terminal"),
       group("<leader>u", "UI toggles"),
       group("<leader>y", "Yank"),

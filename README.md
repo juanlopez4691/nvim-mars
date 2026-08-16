@@ -90,7 +90,7 @@ NVIM_APPNAME=nvim-mars nvim
 | `<leader>o`   | OpenCode (AI chat)    |
 | `<leader>q`   | Session               |
 | `<leader>r`   | Replace               |
-| `<leader>s`   | Search & replace      |
+| `<leader>s`   | Search                |
 | `<leader>t`   | Terminal              |
 | `<leader>y`   | Yank / Paste          |
 
