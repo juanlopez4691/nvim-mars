@@ -8,6 +8,41 @@ end
 
 vim.lsp.enable(names)
 
+-- Call-hierarchy browsing (incoming/outgoing calls) as a fuzzy picker on
+-- `gai`/`gao`, bound buffer-local only when an attached client supports the
+-- method. fzf-lua loads on first use via the plugins wrapper, so no startup
+-- dependency.
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("mars_lsp_call_hierarchy", { clear = true }),
+  callback = function(ev)
+    local client = vim.lsp.get_client_by_id(ev.data.client_id)
+    if not client then
+      return
+    end
+    local fzf = require("mars.plugins.fzf-lua")
+    if client:supports_method(vim.lsp.protocol.Methods.callHierarchy_incomingCalls, ev.buf) then
+      vim.keymap.set(
+        "n",
+        "gai",
+        fzf.use(function(fzf_lua)
+          fzf_lua.lsp_incoming_calls()
+        end),
+        { buffer = ev.buf, silent = true, desc = "LSP incoming calls" }
+      )
+    end
+    if client:supports_method(vim.lsp.protocol.Methods.callHierarchy_outgoingCalls, ev.buf) then
+      vim.keymap.set(
+        "n",
+        "gao",
+        fzf.use(function(fzf_lua)
+          fzf_lua.lsp_outgoing_calls()
+        end),
+        { buffer = ev.buf, silent = true, desc = "LSP outgoing calls" }
+      )
+    end
+  end,
+})
+
 -- Border is read at runtime from mars.ui.borders so local.lua overrides apply.
 vim.lsp.handlers["textDocument/hover"] = function(err, result, ctx, config)
   vim.lsp.handlers.hover(
