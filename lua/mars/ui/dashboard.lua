@@ -73,16 +73,18 @@ local function greeting()
   return ("Good %s, %s"):format(part, username)
 end
 
---- Whether a plugin is registered with vim.pack, loaded or not.
+-- vim.pack's install directory. `pack_has` reads it directly instead of
+-- `vim.pack.get()`, which re-scans every plugin's git state on each call
+-- (~75ms); render() checks each action's availability, so the repeated
+-- scans would add half a second to startup.
+local pack_opt_dir = vim.fs.joinpath(vim.fn.stdpath("data"), "site", "pack", "core", "opt")
+
+--- Whether a plugin is installed with vim.pack, so its action can be shown
+--- as available.
 ---@param name string
 ---@return boolean
 local function pack_has(name)
-  for _, plugin in ipairs(vim.pack.get()) do
-    if plugin.spec.name == name then
-      return true
-    end
-  end
-  return false
+  return vim.fn.isdirectory(vim.fs.joinpath(pack_opt_dir, name)) == 1
 end
 
 --- Runs fn(fzf_lua) if available, otherwise warns. Expected to warn until
