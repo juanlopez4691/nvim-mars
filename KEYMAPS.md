@@ -22,7 +22,7 @@ F-key), not separate bindings with different behavior.
 - [OpenCode (`<leader>o`)](#opencode-leadero)
 - [Session (`<leader>q`)](#session-leaderq)
 - [Replace (`<leader>r`)](#replace-leaderr)
-- [Search & replace (`<leader>s`)](#search--replace-leaders)
+- [Search (`<leader>s`)](#search-leaders)
 - [Yank (`<leader>y`)](#yank-leadery)
 - [Reserved, unused groups](#reserved-unused-groups)
 - [Ungrouped / raw keymaps](#ungrouped--raw-keymaps)
@@ -84,6 +84,7 @@ fzf-lua's own `setup()` runs lazily, on the first picker invocation.
 | `<leader>fg`  | n    | fzf-lua: live grep       |
 | `<leader>fb`  | n    | fzf-lua: open buffers    |
 | `<leader>fr`  | n    | fzf-lua: recent files (oldfiles) |
+| `<leader>fk`  | n    | fzf-lua: all pickers (catch-all menu) |
 
 ## Git (`<leader>g`)
 
@@ -213,18 +214,36 @@ for buffer-wide "replace all occurrences": it's a separate top-level key
 (capital `R`), not a sub-key of the `<leader>r` which-key group above, even
 though it lives in the same file and is conceptually related.
 
-## Search & replace (`<leader>s`)
+## Search (`<leader>s`)
 
-Source: [`lua/mars/core/scooter.lua`](lua/mars/core/scooter.lua). Opens
-[scooter](https://github.com/thomasschafer/scooter), an interactive
-find-and-replace TUI, in a centered floating terminal. `e` on a scooter
-result routes back into this same Neovim instance via `--server`/
-`--remote-send`, the same trick `lazygit.lua` uses for `nvim-remote` edits.
+Source: [`lua/mars/core/scooter.lua`](lua/mars/core/scooter.lua) and
+[`lua/mars/plugins/fzf-lua.lua`](lua/mars/plugins/fzf-lua.lua). The group
+combines the find-and-replace tool (scooter) with the fzf-lua search
+pickers. `ss` opens scooter in a centered floating terminal; the rest open
+fzf-lua pickers.
 
 | Key           | Mode | Action                                                       |
 | ------------- | ---- | ----------------------------------------------------------------- |
 | `<leader>ss`  | n    | Open scooter, rooted at the project root                          |
 | `<leader>ss`  | v    | Open scooter pre-populated with the visual selection as a fixed-string search term |
+| `<leader>sw`  | n    | fzf-lua: grep the word under the cursor, scoped to the project root |
+| `<leader>sw`  | x    | fzf-lua: grep the visual selection, scoped to the project root |
+| `<leader>sW`  | n    | fzf-lua: grep the word under the cursor, in the cwd              |
+| `<leader>sW`  | x    | fzf-lua: grep the visual selection, in the cwd                   |
+| `<leader>sB`  | n    | fzf-lua: grep across open buffers (rg over named buffers)        |
+| `<leader>sb`  | n    | fzf-lua: lines of open buffers                                   |
+| `<leader>sc`  | n    | fzf-lua: command history                                         |
+| `<leader>s/`  | n    | fzf-lua: search history                                          |
+| `<leader>sh`  | n    | fzf-lua: help pages (helptags)                                   |
+| `<leader>sM`  | n    | fzf-lua: man pages                                               |
+| `<leader>s"`  | n    | fzf-lua: registers                                               |
+| `<leader>sm`  | n    | fzf-lua: marks                                                   |
+| `<leader>sj`  | n    | fzf-lua: jumps                                                   |
+| `<leader>sa`  | n    | fzf-lua: autocmds                                                |
+| `<leader>sC`  | n    | fzf-lua: commands                                                |
+| `<leader>sk`  | n    | fzf-lua: keymaps                                                 |
+| `<leader>sR`  | n    | fzf-lua: resume the last picker                                  |
+| `<leader>su`  | n    | fzf-lua: undo history                                            |
 
 ## Yank (`<leader>y`)
 
@@ -306,6 +325,16 @@ key typed (a vowel) completes the pair.
 
 Note: insert-mode `<C-h>` above is unrelated to normal-mode `<C-h>` (split
 navigation, below); different modes, no conflict.
+
+### LSP call hierarchy (`lua/mars/core/lsp.lua`)
+
+Buffer-local only, bound on `LspAttach` when the attached client supports
+call-hierarchy requests. Not present as global keymaps.
+
+| Key   | Mode | Action                                              |
+| ----- | ---- | --------------------------------------------------- |
+| `gai` | n    | fzf-lua: incoming calls to the symbol under the cursor |
+| `gao` | n    | fzf-lua: outgoing calls from the symbol under the cursor |
 
 ### Split navigation & resize (`lua/mars/core/splits.lua`)
 
