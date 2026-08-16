@@ -8,13 +8,11 @@ local group = vim.api.nvim_create_augroup("mars_qol", { clear = true })
 
 -- Briefly flash-highlight the yanked region after any yank/delete-into-
 -- register operation, so it's visually obvious what was just grabbed.
--- `higroup`/`timeout` here match `vim.highlight.on_yank()`'s own defaults;
--- spelled out for clarity rather than relying on them implicitly.
 vim.api.nvim_create_autocmd("TextYankPost", {
   group = group,
   desc = "Flash-highlight the yanked text region",
   callback = function()
-    vim.highlight.on_yank({ higroup = "IncSearch", timeout = 150 })
+    vim.highlight.on_yank()
   end,
 })
 

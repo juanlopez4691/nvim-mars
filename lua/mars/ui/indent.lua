@@ -50,16 +50,6 @@ local function apply_highlights()
   vim.api.nvim_set_hl(0, "MarsIndentGuideScope", { link = "CursorLineNr" })
 end
 
---- Effective 'shiftwidth' for `bufnr`, resolving the shiftwidth=0 ("use
---- 'tabstop' instead") case the same way Vim itself does.
----@param bufnr integer
----@return integer
-local function effective_shiftwidth(bufnr)
-  return vim.api.nvim_buf_call(bufnr, function()
-    return vim.fn.shiftwidth()
-  end)
-end
-
 --- Indentation level of a single line: its leading whitespace's display
 --- width divided by `shiftwidth`, rounded down. Blank (or whitespace-only)
 --- lines return nil; callers resolve their level from surrounding context
@@ -223,7 +213,7 @@ function M.refresh(winid)
   local last = vim.fn.line("w$", winid)
   vim.api.nvim_buf_clear_namespace(bufnr, ns, first, last)
 
-  local shiftwidth = effective_shiftwidth(bufnr)
+  local shiftwidth = vim.fn.shiftwidth(bufnr)
   if shiftwidth <= 0 then
     return
   end
