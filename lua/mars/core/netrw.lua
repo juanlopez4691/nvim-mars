@@ -247,6 +247,56 @@ local function open_in_split(vertical)
   vim.g.netrw_chgwin = prev
 end
 
+--- Netrw keymap reference, shown by `?` in the sidebar. Covers the
+--- day-to-day keys; the Mars deviations from stock netrw are called out
+--- (`o`/`v` open in the last active window, not the sidebar).
+local NETRW_HELP = {
+  "  Mars netrw keymaps",
+  "  " .. string.rep("─", 24),
+  "",
+  "  Browse",
+  "    <CR>  open file / enter directory",
+  "    h     fold directory",
+  "    l     unfold directory / open file",
+  "    -     go up one directory",
+  "    u/U   history back / forward",
+  "",
+  "  Open",
+  "    o     horizontal split (last active window)",
+  "    v     vertical split (last active window)",
+  "    P     previous window",
+  "    p     preview",
+  "    t     new tab",
+  "    O     obtain (copy file into cwd)",
+  "",
+  "  Files",
+  "    %     new file",
+  "    d     new directory",
+  "    D     delete",
+  "    R     rename",
+  "",
+  "  Display",
+  "    i     listing style",
+  "    I     toggle banner",
+  "    a     toggle hidden files",
+  "    s     sort by",
+  "    cd    make browsed dir the cwd",
+  "",
+  "  Mark",
+  "    mf    mark / unmark file",
+  "    mc    copy marked",
+  "    mm    move marked",
+  "    mu    unmark all",
+  "",
+  "  ?  this help     q / <Esc>  close",
+}
+
+--- Shows the netrw keymap reference in a centered floating window.
+--- Dismissible with `q`/`<Esc>`.
+local function show_netrw_help()
+  require("mars.popup").show(NETRW_HELP)
+end
+
 --- Namespace for the tree-line overlay (see draw_tree_lines).
 local tree_ns = vim.api.nvim_create_namespace("mars_netrw_tree")
 
@@ -404,6 +454,10 @@ vim.api.nvim_create_autocmd("FileType", {
       desc = "Explorer: unfold directory or open file",
     })
     vim.keymap.set("n", "h", fold, { buffer = args.buf, desc = "Explorer: fold directory" })
+    vim.keymap.set("n", "?", show_netrw_help, {
+      buffer = args.buf,
+      desc = "Explorer: show keymap help",
+    })
 
     -- Netrw rewrites the whole listing on every fold, unfold and refresh,
     -- so the overlay follows the buffer's own changes rather than the
