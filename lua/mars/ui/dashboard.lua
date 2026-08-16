@@ -133,18 +133,15 @@ local function open_tool_installer()
   vim.cmd("Mason")
 end
 
---- Summarizes plugins registered via vim.pack.
-local function show_plugin_status()
-  local plugins = vim.pack.get()
-  if #plugins == 0 then
-    vim.notify("No plugins registered via vim.pack.", vim.log.levels.INFO)
-    return
+--- Fetches plugin updates and opens vim.pack's confirmation in a popup.
+---@return boolean
+local function update_plugins()
+  if vim.fn.exists(":PackUpdate") ~= 2 then
+    vim.notify("No pack manager is configured yet.", vim.log.levels.WARN)
+    return false
   end
-  local lines = {}
-  for _, plugin in ipairs(plugins) do
-    lines[#lines + 1] = ("%s (%s)"):format(plugin.spec.name, plugin.active and "active" or "inactive")
-  end
-  require("mars.popup").show(lines, { title = "Plugin status", pad = 2 })
+  vim.cmd("PackUpdate")
+  return true
 end
 
 ---@class mars.dashboard.Action
@@ -219,12 +216,12 @@ local ACTIONS = {
 local MAINTENANCE_ACTIONS = {
   {
     key = "p",
-    desc = "Plugin Status",
+    desc = "Update Plugins",
     icon = ICONS.puzzle,
     available = function()
-      return true
+      return vim.fn.exists(":PackUpdate") == 2
     end,
-    run = show_plugin_status,
+    run = update_plugins,
   },
   {
     key = "m",
