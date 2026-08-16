@@ -2,6 +2,8 @@
 -- nearly every redraw, so anything touching the filesystem is cached per
 -- buffer and invalidated by autocmd, never computed inline.
 
+local color = require("mars.color")
+
 local M = {}
 
 --- Doubles every "%" so buffer/register text survives the nested parse
@@ -37,32 +39,60 @@ local function join(parts)
   return table.concat(out, " ")
 end
 
+--- Mode source group -> derived block group that paints the mode color as a
+--- background instead of a text color. Re-derived per colorscheme.
+---@type table<string, string>
+local MODE_HL = {
+  DiagnosticOk = "MarsStatuslineModeOk",
+  DiagnosticInfo = "MarsStatuslineModeInfo",
+  DiagnosticWarn = "MarsStatuslineModeWarn",
+  DiagnosticError = "MarsStatuslineModeError",
+  Title = "MarsStatuslineModeTitle",
+  Comment = "MarsStatuslineModeComment",
+  StatusLine = "MarsStatuslineModeStatus",
+}
+
+--- (Re)derives the mode-block highlights from the active colorscheme: each
+--- mode's color becomes the block's background, with a contrasting
+--- black/white label on top.
+local function apply_mode_highlights()
+  for source, name in pairs(MODE_HL) do
+    local fg = vim.api.nvim_get_hl(0, { name = source }).fg
+    if fg then
+      vim.api.nvim_set_hl(0, name, {
+        fg = color.readable_fg(string.format("%06x", fg)),
+        bg = "#" .. string.format("%06x", fg),
+      })
+    end
+  end
+end
+
 ---@return string label
 ---@return string group
 local function mode_info()
   local c = vim.fn.mode():sub(1, 1)
   if c == "n" then
-    return "NORMAL", "DiagnosticOk"
+    return "NORMAL", MODE_HL.DiagnosticOk
   elseif c == "i" then
-    return "INSERT", "DiagnosticInfo"
+    return "INSERT", MODE_HL.DiagnosticInfo
   elseif c == "v" then
-    return "VISUAL", "DiagnosticWarn"
+    return "VISUAL", MODE_HL.DiagnosticWarn
   elseif c == "V" then
-    return "V-LINE", "DiagnosticWarn"
+    return "V-LINE", MODE_HL.DiagnosticWarn
   elseif c == "\22" then
-    return "V-BLOCK", "DiagnosticWarn"
+    return "V-BLOCK", MODE_HL.DiagnosticWarn
   elseif c == "s" or c == "S" or c == "\19" then
-    return "SELECT", "DiagnosticWarn"
+    return "SELECT", MODE_HL.DiagnosticWarn
   elseif c == "R" then
-    return "REPLACE", "DiagnosticError"
+    return "REPLACE", MODE_HL.DiagnosticError
   elseif c == "c" then
-    return "COMMAND", "Title"
+    return "COMMAND", MODE_HL.Title
   elseif c == "r" then
-    return "PROMPT", "Title"
+    return "PROMPT", MODE_HL.Title
   elseif c == "t" then
-    return "TERMINAL", "Comment"
+    return "TERMINAL", MODE_HL.Comment
   end
-  return c:upper(), "StatusLine"
+  return c:upper(), MODE_HL.StatusLine
 end
 
 -- Per-buffer project root, found by walking up from the buffer's path.
@@ -83,6 +113,14 @@ local function project_root(bufnr)
 end
 
 local group = vim.api.nvim_create_augroup("mars_statusline", { clear = true })
+
+apply_mode_highlights()
+
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = group,
+  desc = "Re-derive mode-block highlights after the colorscheme (re)loads",
+  callback = apply_mode_highlights,
+})
 
 vim.api.nvim_create_autocmd({ "BufFilePost", "BufDelete", "BufWipeout" }, {
   group = group,
