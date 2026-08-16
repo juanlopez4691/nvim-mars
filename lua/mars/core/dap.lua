@@ -20,20 +20,29 @@
 -- action below binds both forms; whichever one a given terminal reports,
 -- the keymap fires.
 
---- Returns a callback that pcall-guards `require("dap")`, then calls
---- `dap[fn_name]()` with no arguments. Warns and no-ops instead of erroring
---- if nvim-dap isn't available (e.g. not finished loading yet, or the
---- plugin failed to install).
+--- Pcall-guards `require(mod)` and returns the module, or nil (with a
+--- warning) when nvim-dap isn't available (e.g. not finished loading yet,
+--- or the plugin failed to install).
+---@param mod string
+---@return table?
+local function require_dap(mod)
+  local ok, dap = pcall(require, mod)
+  if not ok then
+    vim.notify("nvim-dap is not available", vim.log.levels.WARN)
+    return nil
+  end
+  return dap
+end
+
+--- Returns a callback that calls `dap[fn_name]()` with no arguments.
 ---@param fn_name string
 ---@return fun()
 local function safe_dap_call(fn_name)
   return function()
-    local ok, dap = pcall(require, "dap")
-    if not ok then
-      vim.notify("nvim-dap is not available", vim.log.levels.WARN)
-      return
+    local dap = require_dap("dap")
+    if dap then
+      dap[fn_name]()
     end
-    dap[fn_name]()
   end
 end
 
@@ -42,12 +51,10 @@ end
 ---@return fun()
 local function safe_dapui_call(fn_name)
   return function()
-    local ok, dapui = pcall(require, "dapui")
-    if not ok then
-      vim.notify("nvim-dap-ui is not available", vim.log.levels.WARN)
-      return
+    local dapui = require_dap("dapui")
+    if dapui then
+      dapui[fn_name]()
     end
-    dapui[fn_name]()
   end
 end
 
@@ -55,12 +62,10 @@ end
 --- the current line. Pcall-guarded the same way as `safe_dap_call`.
 ---@return nil
 local function set_conditional_breakpoint()
-  local ok, dap = pcall(require, "dap")
-  if not ok then
-    vim.notify("nvim-dap is not available", vim.log.levels.WARN)
-    return
+  local dap = require_dap("dap")
+  if dap then
+    dap.set_breakpoint(vim.fn.input("Breakpoint condition: "))
   end
-  dap.set_breakpoint(vim.fn.input("Breakpoint condition: "))
 end
 
 --- Closes dap-ui, then terminates the current debug session. Each half
@@ -96,12 +101,10 @@ end
 --- arguments via `get_args`. Pcall-guarded the same way as `safe_dap_call`.
 ---@return nil
 local function run_with_args()
-  local ok, dap = pcall(require, "dap")
-  if not ok then
-    vim.notify("nvim-dap is not available", vim.log.levels.WARN)
-    return
+  local dap = require_dap("dap")
+  if dap then
+    dap.continue({ before = get_args })
   end
-  dap.continue({ before = get_args })
 end
 
 --- Toggles nvim-dap's REPL window. Pcall-guarded the same way as
@@ -109,12 +112,10 @@ end
 --- top-level `dap.*` function.
 ---@return nil
 local function toggle_repl()
-  local ok, dap = pcall(require, "dap")
-  if not ok then
-    vim.notify("nvim-dap is not available", vim.log.levels.WARN)
-    return
+  local dap = require_dap("dap")
+  if dap then
+    dap.repl.toggle()
   end
-  dap.repl.toggle()
 end
 
 --- Shows a hover widget with debug info (scopes/variables) for the
@@ -122,12 +123,10 @@ end
 --- Pcall-guarded the same way as `safe_dap_call`.
 ---@return nil
 local function widget_hover()
-  local ok, widgets = pcall(require, "dap.ui.widgets")
-  if not ok then
-    vim.notify("nvim-dap is not available", vim.log.levels.WARN)
-    return
+  local widgets = require_dap("dap.ui.widgets")
+  if widgets then
+    widgets.hover()
   end
-  widgets.hover()
 end
 
 --- Binds normal-mode `rhs` to every lhs in `lhs_list` with the same
