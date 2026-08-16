@@ -260,7 +260,7 @@ local dashboard_row_actions = {}
 ---@param action mars.dashboard.Action
 ---@return string desc, string key_hl, string desc_hl
 local function format_action(action)
-  local icon = vim.g.have_nerd_font and (action.icon .. " ") or ""
+  local icon = vim.g.have_nerd_font and (action.icon .. "  ") or ""
   local desc = icon .. action.desc
   if action.available() then
     return desc, "Special", "Directory"
