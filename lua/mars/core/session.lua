@@ -76,12 +76,11 @@ function M.stop()
   skip_save = true
 end
 
---- Writes the session file for `cwd` (defaults to the current directory).
---- Creates the session directory on demand and notifies rather than
---- raising if the write fails, since this runs from VimLeavePre where an
---- uncaught error would abort quitting.
----@param cwd? string
-function M.save(cwd)
+--- Writes the session file for the current directory. Creates the session
+--- directory on demand and notifies rather than raising if the write fails,
+--- since this runs from VimLeavePre where an uncaught error would abort
+--- quitting.
+function M.save()
   if vim.fn.isdirectory(session_dir) == 0 then
     vim.fn.mkdir(session_dir, "p")
   end
@@ -89,7 +88,7 @@ function M.save(cwd)
   local previous = vim.o.sessionoptions
   vim.o.sessionoptions = SESSION_OPTIONS
 
-  local ok, err = pcall(vim.cmd, ("mksession! %s"):format(vim.fn.fnameescape(session_path(cwd))))
+  local ok, err = pcall(vim.cmd, ("mksession! %s"):format(vim.fn.fnameescape(session_path())))
 
   vim.o.sessionoptions = previous
 
@@ -98,13 +97,11 @@ function M.save(cwd)
   end
 end
 
---- Restores the session file for `cwd` (defaults to the current
---- directory), if one exists.
----@param cwd? string
-function M.restore(cwd)
-  local path = session_path(cwd)
+--- Restores the session file for the current directory, if one exists.
+function M.restore()
+  local path = session_path()
   if vim.fn.filereadable(path) == 0 then
-    vim.notify(("No saved session for %s"):format(cwd or vim.uv.cwd()), vim.log.levels.WARN)
+    vim.notify(("No saved session for %s"):format(vim.uv.cwd()), vim.log.levels.WARN)
     return
   end
 
