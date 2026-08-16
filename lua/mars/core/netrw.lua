@@ -378,6 +378,12 @@ vim.api.nvim_create_autocmd("FileType", {
     -- which would otherwise stretch it to an even share of the screen.
     vim.wo.winfixwidth = true
 
+    -- This buffer browses a local directory. Netrw only ever sets
+    -- `b:netrw_islocal` in its mark-file path, so without this its own
+    -- obtain (`O`) always takes the remote branch, which crashes in the
+    -- bundled runtime (E118 in netrw#msg#Notify) instead of copying.
+    vim.b[args.buf].netrw_islocal = 1
+
     -- Netrw maps <C-l> buffer-locally to <Plug>NetrwRefresh, which shadows
     -- the global split-navigation keymap (lua/mars/core/splits.lua) and,
     -- from a sidebar, re-lists the tree into the neighbouring window
