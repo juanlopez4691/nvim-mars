@@ -9,6 +9,18 @@ require("mars.pack").add({
   { src = "https://github.com/mason-org/mason.nvim" },
 })
 
+-- `mason.setup()` prepends its `bin/` dir to PATH, but that only runs at
+-- VimEnter, too late for LSP servers, which spawn on FileType for a buffer
+-- opened at startup (e.g. `nvim package.json`). Prepend the bin dir here so
+-- every server resolves its binary regardless of when it starts. Matching
+-- mason's own default install root (`stdpath("data")/mason`); a missing dir
+-- on PATH is harmless.
+local sep = vim.fn.has("win32") == 1 and ";" or ":"
+local mason_bin = vim.fs.joinpath(vim.fn.stdpath("data") --[[@as string]], "mason", "bin")
+if not vim.env.PATH:find(mason_bin, 1, true) then
+  vim.env.PATH = mason_bin .. sep .. vim.env.PATH
+end
+
 --- Tools this config expects to stay installed, keyed by their name in
 --- Mason's own registry (`:Mason` to browse it).
 local ensure_installed = {
