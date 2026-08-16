@@ -142,9 +142,9 @@ local function show_plugin_status()
   end
   local lines = {}
   for _, plugin in ipairs(plugins) do
-    table.insert(lines, ("%s (%s)"):format(plugin.spec.name, plugin.active and "active" or "inactive"))
+    lines[#lines + 1] = ("%s (%s)"):format(plugin.spec.name, plugin.active and "active" or "inactive")
   end
-  vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO, { title = "Plugin status" })
+  require("mars.popup").show(lines, { title = "Plugin status", pad = 2 })
 end
 
 ---@class mars.dashboard.Action
