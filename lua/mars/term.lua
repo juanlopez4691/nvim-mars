@@ -119,4 +119,23 @@ function M.recenter(state, win_config)
   end
 end
 
+--- Centered-float window config for the TUI terminals, sized as fractions of
+--- the editor. `vim.g.mars_term_size` overrides the size (e.g. `{ width = 0.8,
+--- height = 0.7 }`); read at call time so local.lua overrides apply.
+---@return vim.api.keyset.win_config
+function M.float_geometry()
+  local size = type(vim.g.mars_term_size) == "table" and vim.g.mars_term_size or {}
+  local width = math.floor(vim.o.columns * (size.width or 0.9))
+  local height = math.floor(vim.o.lines * (size.height or 0.9))
+  return {
+    relative = "editor",
+    width = width,
+    height = height,
+    row = math.floor((vim.o.lines - height) / 2),
+    col = math.floor((vim.o.columns - width) / 2),
+    style = "minimal",
+    border = require("mars.ui.borders").style(),
+  }
+end
+
 return M

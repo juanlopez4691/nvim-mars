@@ -17,21 +17,6 @@ local augroup = vim.api.nvim_create_augroup("mars_lazygit", { clear = true })
 ---@type string|boolean|nil
 local lazygit_config_dir = nil
 
----@return vim.api.keyset.win_config
-local function win_geometry()
-  local width = math.floor(vim.o.columns * 0.9)
-  local height = math.floor(vim.o.lines * 0.9)
-  return {
-    relative = "editor",
-    width = width,
-    height = height,
-    row = math.floor((vim.o.lines - height) / 2),
-    col = math.floor((vim.o.columns - width) / 2),
-    style = "minimal",
-    border = require("mars.ui.borders").style(),
-  }
-end
-
 --- Writes (once) a small lazygit config snippet forcing the `nvim-remote`
 --- editor preset, layered over the user's own global config when one exists.
 ---@return string
@@ -71,7 +56,7 @@ function M.open()
   local win = term.open(state, {
     cmd = { "lazygit", "--use-config-file", editor_config_arg() },
     cwd = vim.fs.root(0, ".git") or vim.uv.cwd(),
-    win_config = win_geometry(),
+    win_config = term.float_geometry(),
   })
   if win then
     vim.cmd.startinsert()
@@ -82,7 +67,7 @@ vim.api.nvim_create_autocmd("VimResized", {
   group = augroup,
   desc = "Keep the lazygit float centered and sized to the current window",
   callback = function()
-    term.recenter(state, win_geometry())
+    term.recenter(state, term.float_geometry())
   end,
 })
 

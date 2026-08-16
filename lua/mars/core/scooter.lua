@@ -12,21 +12,6 @@ local state = { win = nil, buf = nil, job = nil, root = nil }
 
 local augroup = vim.api.nvim_create_augroup("mars_scooter", { clear = true })
 
----@return vim.api.keyset.win_config
-local function win_geometry()
-  local width = math.floor(vim.o.columns * 0.9)
-  local height = math.floor(vim.o.lines * 0.9)
-  return {
-    relative = "editor",
-    width = width,
-    height = height,
-    row = math.floor((vim.o.lines - height) / 2),
-    col = math.floor((vim.o.columns - width) / 2),
-    style = "minimal",
-    border = require("mars.ui.borders").style(),
-  }
-end
-
 local EDITOR_COMMAND =
   [[nvim --server $NVIM --remote-send '<cmd>lua require("mars.core.scooter").jump_to_result("%file", %line)<CR>']]
 
@@ -74,7 +59,7 @@ local function start(extra_args)
   local win = term.open(state, {
     cmd = cmd,
     cwd = state.root,
-    win_config = win_geometry(),
+    win_config = term.float_geometry(),
   })
   if win then
     vim.cmd.startinsert()
@@ -106,7 +91,7 @@ vim.api.nvim_create_autocmd("VimResized", {
   group = augroup,
   desc = "Keep the scooter float centered and sized to the current window",
   callback = function()
-    term.recenter(state, win_geometry())
+    term.recenter(state, term.float_geometry())
   end,
 })
 

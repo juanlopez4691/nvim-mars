@@ -44,7 +44,9 @@ local is_setup = false
 
 --- Run fzf-lua's `setup()` on first use rather than at startup. Keymaps are
 --- the only entry point here (no event/ft/cmd to hook via `mars.pack.on`),
---- so the deferral lives in this wrapper.
+--- so the deferral lives in this wrapper. The window size comes from
+--- `vim.g.mars_fzf_size` (fractions, e.g. `{ width = 0.8, height = 0.7 }`),
+--- defaulting to fzf-lua's own 0.8 x 0.85.
 ---@param fn fun(fzf_lua: table)
 ---@return fun()
 local function use(fn)
@@ -54,7 +56,13 @@ local function use(fn)
       -- "default-title" labels each picker window with its name; fzf-lua's
       -- other defaults (incl. icons) are left alone rather than baked in
       -- from `vim.g.have_nerd_font`.
-      require("fzf-lua").setup({ "default-title" })
+      local size = type(vim.g.mars_fzf_size) == "table" and vim.g.mars_fzf_size or {}
+      local opts = { "default-title" }
+      opts.winopts = {
+        width = size.width or 0.8,
+        height = size.height or 0.85,
+      }
+      require("fzf-lua").setup(opts)
     end
     fn(require("fzf-lua"))
   end
