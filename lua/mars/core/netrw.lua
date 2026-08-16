@@ -217,13 +217,15 @@ local function split_target()
   return target
 end
 
---- `o`: open the file under the cursor in a horizontal split of the last
---- active window, never the sidebar. Netrw's own `o` splits the netrw
---- window itself, so this creates the split in the main window first and
---- points `g:netrw_chgwin` at it, then lets netrw's own <CR> (which knows
---- tree paths, symlinks and decorations) open the file into it. Directories
---- keep netrw's <CR> (navigate in place), so no second netrw window appears.
-local function open_hsplit()
+--- `o`/`v`: open the file under the cursor in a split of the last active
+--- window, never the sidebar. `o` splits horizontally, `v` (netrw's own
+--- vertical-split key) vertically. Netrw's split keys split the netrw window
+--- itself, so this creates the split in the main window first and points
+--- `g:netrw_chgwin` at it, then lets netrw's own <CR> (which knows tree
+--- paths, symlinks and decorations) open the file into it. Directories keep
+--- netrw's <CR> (navigate in place), so no second netrw window appears.
+---@param vertical boolean
+local function open_in_split(vertical)
   local word = vim.fn.getline("."):gsub("^[| ]*", ""):gsub("\t.*$", "")
   if word == "" or word:sub(-1) == "/" then
     activate()
@@ -233,7 +235,7 @@ local function open_hsplit()
   vim.api.nvim_set_current_win(split_target())
   -- A fresh, unmodified buffer in the split, so netrw will edit the file
   -- into it even when the main buffer has unsaved changes.
-  vim.cmd("split")
+  vim.cmd(vertical and "vsplit" or "split")
   vim.cmd("enew")
   local split_win = vim.api.nvim_get_current_win()
   vim.api.nvim_set_current_win(netrw_win)
@@ -416,13 +418,21 @@ vim.api.nvim_create_autocmd("FileType", {
       local queued = false
       vim.api.nvim_buf_attach(args.buf, false, {
         on_lines = function(_, buf)
-          -- Re-assert `o` on every listing write, synchronously: netrw maps
-          -- it buffer-locally before each render (after FileType), so this
-          -- must land after netrw's own map or the split would hit the
-          -- sidebar.
-          vim.keymap.set("n", "o", open_hsplit, {
+          -- Re-assert `o`/`v` on every listing write, synchronously: netrw
+          -- maps them buffer-locally before each render (after FileType), so
+          -- this must land after netrw's own maps. `O` (obtain) stays on
+          -- netrw's own mapping.
+          vim.keymap.set("n", "o", function()
+            open_in_split(false)
+          end, {
             buffer = buf,
             desc = "Explorer: open file in a horizontal split of the last active window",
+          })
+          vim.keymap.set("n", "v", function()
+            open_in_split(true)
+          end, {
+            buffer = buf,
+            desc = "Explorer: open file in a vertical split of the last active window",
           })
           if queued then
             return
