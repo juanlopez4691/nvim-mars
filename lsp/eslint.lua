@@ -88,34 +88,9 @@ return {
 
     on_dir(project_root)
   end,
-  -- https://github.com/Microsoft/vscode-eslint#settings-options
   settings = {
-    validate = "on",
-    useESLintClass = false,
-    experimental = {},
-    codeActionOnSave = {
-      enable = false,
-      mode = "all",
-    },
-    format = true,
-    quiet = false,
-    onIgnoredFiles = "off",
-    rulesCustomizations = {},
-    run = "onType",
-    problems = {
-      shortenToSingleLine = false,
-    },
-    nodePath = "",
-    workingDirectory = { mode = "auto" },
-    codeAction = {
-      disableRuleComment = {
-        enable = true,
-        location = "separateLine",
-      },
-      showDocumentation = {
-        enable = true,
-      },
-    },
+    -- Only deviation from vscode-eslint's defaults: never auto-fix on save.
+    codeActionOnSave = { enable = false },
   },
   before_init = function(_, config)
     -- The "workspaceFolder" is a VSCode concept: it limits how far the

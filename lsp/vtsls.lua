@@ -63,7 +63,6 @@ return {
     on_dir(project_root or vim.fn.getcwd())
   end,
   settings = {
-    complete_function_calls = true,
     vtsls = {
       enableMoveToFileCodeAction = true,
       autoUseWorkspaceTsdk = true,

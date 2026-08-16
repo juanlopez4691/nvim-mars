@@ -29,25 +29,8 @@ return {
     "typescript",
     "typescriptreact",
   },
-  capabilities = {
-    workspace = {
-      didChangeWatchedFiles = {
-        dynamicRegistration = true,
-      },
-    },
-  },
   settings = {
     tailwindCSS = {
-      validate = true,
-      lint = {
-        cssConflict = "warning",
-        invalidApply = "error",
-        invalidScreen = "error",
-        invalidVariant = "error",
-        invalidConfigPath = "error",
-        invalidTailwindDirective = "error",
-        recommendedVariantOrder = "warning",
-      },
       classAttributes = {
         "class",
         "className",
