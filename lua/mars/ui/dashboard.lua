@@ -155,9 +155,6 @@ local MAINTENANCE_ACTIONS = {
 --- Buffer currently holding the dashboard, if any.
 local dashboard_buf = nil
 
---- {width, height} last rendered at, to skip redundant re-renders.
-local dashboard_size = nil
-
 --- 1-indexed buffer rows the cursor is allowed to rest on, updated on every
 --- render() -- see the CursorMoved restriction set up in open().
 ---@type integer[]
@@ -499,7 +496,6 @@ local function open()
   end, { buffer = buf, nowait = true, silent = true, desc = "Run the menu entry under the cursor" })
 
   render()
-  dashboard_size = current_size()
   restrict_cursor()
 
   vim.api.nvim_create_autocmd("CursorMoved", {
@@ -527,9 +523,7 @@ vim.api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
   desc = "Re-center the Mars dashboard",
   callback = function()
     vim.schedule(function()
-      local size = current_size()
-      if size and not vim.deep_equal(size, dashboard_size) then
-        dashboard_size = size
+      if current_size() then
         render()
         restrict_cursor()
       end
