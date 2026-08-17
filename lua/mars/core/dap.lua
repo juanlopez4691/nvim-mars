@@ -20,26 +20,16 @@ local function require_dap(mod)
   return dap
 end
 
---- Returns a callback that calls `dap[fn_name]()` with no arguments.
+--- Returns a callback that calls `mod[fn_name]()` with no arguments, guarding
+--- against the module not being available (nvim-dap / nvim-dap-ui).
+---@param mod string
 ---@param fn_name string
 ---@return fun()
-local function safe_dap_call(fn_name)
+local function safe_call(mod, fn_name)
   return function()
-    local dap = require_dap("dap")
-    if dap then
-      dap[fn_name]()
-    end
-  end
-end
-
---- Same as `safe_dap_call`, but for nvim-dap-ui.
----@param fn_name string
----@return fun()
-local function safe_dapui_call(fn_name)
-  return function()
-    local dapui = require_dap("dapui")
-    if dapui then
-      dapui[fn_name]()
+    local target = require_dap(mod)
+    if target then
+      target[fn_name]()
     end
   end
 end
@@ -57,8 +47,8 @@ end
 --- safe-wrapped so a broken dap-ui can't stop `dap.terminate()`.
 ---@return nil
 local function terminate()
-  safe_dapui_call("close")()
-  safe_dap_call("terminate")()
+  safe_call("dapui", "close")()
+  safe_call("dap", "terminate")()
 end
 
 --- `before` hook for `dap.continue()`, prompting for launch args
@@ -116,21 +106,21 @@ local function bind(lhs_list, rhs, desc)
   end
 end
 
-bind({ "<leader>db", "<F9>" }, safe_dap_call("toggle_breakpoint"), "Toggle Breakpoint")
+bind({ "<leader>db", "<F9>" }, safe_call("dap", "toggle_breakpoint"), "Toggle Breakpoint")
 bind({ "<leader>dB", "<F21>", "<S-F9>" }, set_conditional_breakpoint, "Conditional Breakpoint")
-bind({ "<leader>dc", "<F5>" }, safe_dap_call("continue"), "Run/Continue")
-bind({ "<leader>dC", "<F17>", "<S-F5>" }, safe_dap_call("run_to_cursor"), "Run to Cursor")
-bind({ "<leader>di", "<F11>" }, safe_dap_call("step_into"), "Step Into")
-bind({ "<leader>do", "<F23>", "<S-F11>" }, safe_dap_call("step_out"), "Step Out")
-bind({ "<leader>dO", "<F10>" }, safe_dap_call("step_over"), "Step Over")
-bind({ "<leader>dj", "<F6>" }, safe_dap_call("down"), "Down Stack Frame")
-bind({ "<leader>dk", "<F18>", "<S-F6>" }, safe_dap_call("up"), "Up Stack Frame")
-bind({ "<leader>dl", "<F29>", "<C-F5>" }, safe_dap_call("run_last"), "Run Last")
-bind({ "<leader>dP", "<F7>" }, safe_dap_call("pause"), "Pause")
+bind({ "<leader>dc", "<F5>" }, safe_call("dap", "continue"), "Run/Continue")
+bind({ "<leader>dC", "<F17>", "<S-F5>" }, safe_call("dap", "run_to_cursor"), "Run to Cursor")
+bind({ "<leader>di", "<F11>" }, safe_call("dap", "step_into"), "Step Into")
+bind({ "<leader>do", "<F23>", "<S-F11>" }, safe_call("dap", "step_out"), "Step Out")
+bind({ "<leader>dO", "<F10>" }, safe_call("dap", "step_over"), "Step Over")
+bind({ "<leader>dj", "<F6>" }, safe_call("dap", "down"), "Down Stack Frame")
+bind({ "<leader>dk", "<F18>", "<S-F6>" }, safe_call("dap", "up"), "Up Stack Frame")
+bind({ "<leader>dl", "<F29>", "<C-F5>" }, safe_call("dap", "run_last"), "Run Last")
+bind({ "<leader>dP", "<F7>" }, safe_call("dap", "pause"), "Pause")
 bind({ "<leader>dt", "<F8>" }, terminate, "Terminate")
-bind({ "<leader>de", "<F12>" }, safe_dapui_call("eval"), "Eval Under Cursor")
+bind({ "<leader>de", "<F12>" }, safe_call("dapui", "eval"), "Eval Under Cursor")
 bind({ "<leader>da" }, run_with_args, "Run with Args")
 bind({ "<leader>dr" }, toggle_repl, "Toggle REPL")
-bind({ "<leader>ds" }, safe_dap_call("session"), "Session")
-bind({ "<leader>du" }, safe_dapui_call("toggle"), "Toggle dap-ui")
+bind({ "<leader>ds" }, safe_call("dap", "session"), "Session")
+bind({ "<leader>du" }, safe_call("dapui", "toggle"), "Toggle dap-ui")
 bind({ "<leader>dw" }, widget_hover, "Widget Hover")
