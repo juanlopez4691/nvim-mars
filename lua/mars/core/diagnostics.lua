@@ -36,30 +36,37 @@ local NERD_FONT_ARROW = vim.fn.nr2char(0xe0b2)
 local UNICODE_ARROW = "◀"
 local ASCII_ARROW = "<"
 
---- Picks the leading arrow glyph for the current render, mirroring
---- diagnostic_icons()'s three tiers.
----@return string
-local function diagnostic_arrow()
+-- Per-tier icon table and arrow glyph, resolved once per call via
+-- current_tier() (both readers need the same three-way tier choice).
+local TIERS = {
+  nerd = { icons = nerd_font_icons, arrow = NERD_FONT_ARROW },
+  unicode = { icons = unicode_icons, arrow = UNICODE_ARROW },
+  ascii = { icons = ascii_icons, arrow = ASCII_ARROW },
+}
+
+--- The active icon tier. Read at call time, since the opt-ins live in
+--- local.lua which loads after this module.
+---@return "nerd"|"unicode"|"ascii"
+local function current_tier()
   if vim.g.have_nerd_font then
-    return NERD_FONT_ARROW
+    return "nerd"
   end
   if vim.g.mars_ascii_diagnostics then
-    return ASCII_ARROW
+    return "ascii"
   end
-  return UNICODE_ARROW
+  return "unicode"
 end
 
---- Picks the icon table for the current render. Read at call time, since the
---- opt-ins live in local.lua which loads after this module.
+--- Picks the leading arrow glyph for the current render.
+---@return string
+local function diagnostic_arrow()
+  return TIERS[current_tier()].arrow
+end
+
+--- Picks the icon table for the current render.
 ---@return table<integer, string>
 local function diagnostic_icons()
-  if vim.g.have_nerd_font then
-    return nerd_font_icons
-  end
-  if vim.g.mars_ascii_diagnostics then
-    return ascii_icons
-  end
-  return unicode_icons
+  return TIERS[current_tier()].icons
 end
 
 -- Chip body and arrow highlight group names, per severity.
