@@ -11,40 +11,59 @@ local M = {}
 --- Own namespace so these diagnostics stay independent of LSP-published ones.
 local ns = vim.api.nvim_create_namespace("mars_lint")
 
---- Parses a phpcs `--report=json` payload into vim.diagnostic items.
---- phpcs may write deprecation noise to stdout ahead of the JSON report, so
---- anything before the first "{" is discarded; line/column are converted
---- from phpcs's 1-indexed values and ERROR/WARNING maps to severity.
----@param output string Raw phpcs stdout
+--- Shared walk over a linter's JSON `{ files: { [path]: { messages: [...] } } }`
+--- payload. `decode` massages the raw stdout (e.g. strips a phpcs deprecation
+--- prefix) into the JSON table; `build` turns one message into a diagnostic.
+---@param output string Raw linter stdout
+---@param decode fun(raw: string): table?
+---@param build fun(message: table): vim.Diagnostic
 ---@return vim.Diagnostic[]
-function M.parse_phpcs(output)
-  local brace = output:find("{", 1, true)
-  if not brace then
-    return {}
-  end
-
-  local ok, decoded = pcall(vim.json.decode, output:sub(brace))
-  if not ok or type(decoded) ~= "table" or type(decoded.files) ~= "table" then
+local function parse(output, decode, build)
+  local decoded = decode(output)
+  if not decoded or type(decoded.files) ~= "table" then
     return {}
   end
 
   local diagnostics = {}
   for _, file in pairs(decoded.files) do
     for _, message in ipairs(file.messages or {}) do
-      table.insert(diagnostics, {
-        lnum = (message.line or 1) - 1,
-        col = (message.column or 1) - 1,
-        end_lnum = (message.line or 1) - 1,
-        end_col = (message.column or 1) - 1,
-        severity = message.type == "ERROR" and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.WARN,
-        message = message.message or "",
-        source = "phpcs",
-        code = message.source,
-      })
+      diagnostics[#diagnostics + 1] = build(message)
     end
   end
-
   return diagnostics
+end
+
+--- Parses a phpcs `--report=json` payload into vim.diagnostic items. phpcs may
+--- write deprecation noise to stdout ahead of the JSON report, so anything
+--- before the first "{" is discarded; line/column are converted from phpcs's
+--- 1-indexed values and ERROR/WARNING maps to severity.
+---@param output string Raw phpcs stdout
+---@return vim.Diagnostic[]
+function M.parse_phpcs(output)
+  return parse(output, function(raw)
+    local brace = raw:find("{", 1, true)
+    if not brace then
+      return nil
+    end
+    local ok, decoded = pcall(vim.json.decode, raw:sub(brace))
+    if not ok or type(decoded) ~= "table" then
+      return nil
+    end
+    return decoded
+  end, function(message)
+    local line = (message.line or 1) - 1
+    local col = (message.column or 1) - 1
+    return {
+      lnum = line,
+      col = col,
+      end_lnum = line,
+      end_col = col,
+      severity = message.type == "ERROR" and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.WARN,
+      message = message.message or "",
+      source = "phpcs",
+      code = message.source,
+    }
+  end)
 end
 
 --- Parses a phpstan `--error-format=json` payload into vim.diagnostic items.
@@ -53,25 +72,21 @@ end
 ---@param output string Raw phpstan stdout
 ---@return vim.Diagnostic[]
 local function parse_phpstan(output)
-  local ok, decoded = pcall(vim.json.decode, output)
-  if not ok or type(decoded) ~= "table" or type(decoded.files) ~= "table" then
-    return {}
-  end
-
-  local diagnostics = {}
-  for _, file in pairs(decoded.files) do
-    for _, message in ipairs(file.messages or {}) do
-      table.insert(diagnostics, {
-        lnum = (message.line or 1) - 1,
-        col = 0,
-        severity = vim.diagnostic.severity.ERROR,
-        message = message.message or "",
-        source = "phpstan",
-      })
+  return parse(output, function(raw)
+    local ok, decoded = pcall(vim.json.decode, raw)
+    if not ok or type(decoded) ~= "table" then
+      return nil
     end
-  end
-
-  return diagnostics
+    return decoded
+  end, function(message)
+    return {
+      lnum = (message.line or 1) - 1,
+      col = 0,
+      severity = vim.diagnostic.severity.ERROR,
+      message = message.message or "",
+      source = "phpstan",
+    }
+  end)
 end
 
 ---@class mars.Linter
