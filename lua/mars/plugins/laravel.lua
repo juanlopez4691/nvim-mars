@@ -65,11 +65,13 @@ require("mars.pack").on({
   end,
 })
 
---- Loads laravel.nvim on demand and runs the named picker, or notifies
+--- Loads laravel.nvim on demand and runs a named entry point, or notifies
 --- instead of erroring when this isn't a Laravel project.
+---@param invoke fun(name: string) runs `_G.Laravel.pickers[name]()` or
+---  `_G.Laravel.commands.run(name)`
 ---@param name string
 ---@return fun()
-local function picker(name)
+local function laravel_entry(invoke, name)
   return function()
     if not is_laravel_project() then
       vim.notify("Not a Laravel project (no `artisan` found)", vim.log.levels.WARN)
@@ -77,24 +79,26 @@ local function picker(name)
     end
     setup_laravel()
     -- selene: allow(global_usage)
-    _G.Laravel.pickers[name]()
+    invoke(name)
   end
 end
 
---- Same on-demand load and non-Laravel guard as `picker()`, for a named
---- Laravel command entry point (Actions, Hub, Command Center, ...).
+---@param name string
+---@return fun()
+local function picker(name)
+  -- selene: allow(global_usage)
+  return laravel_entry(function(n)
+    _G.Laravel.pickers[n]()
+  end, name)
+end
+
 ---@param name string
 ---@return fun()
 local function command(name)
-  return function()
-    if not is_laravel_project() then
-      vim.notify("Not a Laravel project (no `artisan` found)", vim.log.levels.WARN)
-      return
-    end
-    setup_laravel()
-    -- selene: allow(global_usage)
-    _G.Laravel.commands.run(name)
-  end
+  -- selene: allow(global_usage)
+  return laravel_entry(function(n)
+    _G.Laravel.commands.run(n)
+  end, name)
 end
 
 vim.keymap.set("n", "<leader>ll", picker("laravel"), { desc = "Laravel Picker" })
