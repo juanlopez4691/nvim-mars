@@ -23,6 +23,7 @@ F-key), not separate bindings with different behavior.
 - [Session (`<leader>q`)](#session-leaderq)
 - [Replace (`<leader>r`)](#replace-leaderr)
 - [Search (`<leader>s`)](#search-leaders)
+- [Terminal (`<leader>t`)](#terminal-leadert)
 - [Yank (`<leader>y`)](#yank-leadery)
 - [Reserved, unused groups](#reserved-unused-groups)
 - [Ungrouped / raw keymaps](#ungrouped--raw-keymaps)
@@ -151,7 +152,9 @@ Source: [`lua/mars/plugins/opencode.lua`](lua/mars/plugins/opencode.lua).
 The sole AI surface in this config (see AGENTS.md). `ask(...)` variants open
 an editable prompt pre-filled with a context placeholder; `prompt(...)`
 variants submit immediately against `@this` (the current selection, or the
-cursor position with no selection).
+cursor position with no selection). The terminal runs through the shared
+terminal manager (see [Terminal](#terminal-leadert)) in a right split:
+submitting a prompt brings it into view.
 
 | Key           | Mode | Action                                     |
 | ------------- | ---- | --------------------------------------------- |
@@ -245,6 +248,31 @@ fzf-lua pickers.
 | `<leader>sR`  | n    | fzf-lua: resume the last picker                                  |
 | `<leader>su`  | n    | fzf-lua: undo history                                            |
 
+## Terminal (`<leader>t`)
+
+Source: [`lua/mars/core/terminal.lua`](lua/mars/core/terminal.lua). Generic
+shell terminals (`vim.o.shell`) running through the shared terminal manager.
+`tt` toggles a horizontal split across the bottom (40% height by default);
+`tv` toggles a vertical split down the right (40% width by default): each an
+independent terminal. Sizes are configurable via
+`vim.g.mars_split_terminal_size` (e.g. `{ height = 0.5, width = 0.45 }`), set
+in `lua/mars/local.lua`. A count opens another stacked terminal
+(`2<leader>tt`).
+
+The same underlying manager (`lua/mars/helpers/term.lua`) also runs the
+lazygit, scooter, and OpenCode terminals, so they share one behavior contract:
+entering a terminal window drops straight into terminal mode, double-`<Esc>`
+returns to normal mode (single `<Esc>` still reaches the TUI), `q` in normal
+mode inside a terminal closes it (terminating the job), and `<C-h/j/k/l>`
+from inside a terminal navigate to the adjacent split.
+
+| Key           | Mode | Action                             |
+| ------------- | ---- | ------------------------------------- |
+| `<leader>tt`  | n    | Toggle horizontal terminal (bottom)  |
+| `<leader>tv`  | n    | Toggle vertical terminal (right)     |
+
+Also available as `:MarsTerminal` (the horizontal terminal).
+
 ## Yank (`<leader>y`)
 
 Source: [`lua/mars/core/clipboard.lua`](lua/mars/core/clipboard.lua). Mars
@@ -274,12 +302,9 @@ grepping every `vim.keymap.set` call site, not just guessed at):
   `README.md`'s keymap-namespace table lists it as "AI (opencode)", but the
   actual OpenCode integration lives entirely under `<leader>o` (see
   [OpenCode](#opencode-leadero) above): `<leader>a` itself is untouched.
-- **`<leader>t`: "Terminal"**. Reserved namespace; no generic terminal
-  toggle exists yet. (OpenCode's own terminal has its own toggle under
-  `<leader>ot`/`<leader>oq`; that's unrelated to this reserved group.)
 
-Pressing `<leader>a` or `<leader>t` shows an empty which-key popup: this is
-expected, not a bug, and is called out in `which-key.lua`'s own comments.
+Pressing `<leader>a` shows an empty which-key popup: this is expected, not
+a bug, and is called out in `which-key.lua`'s own comments.
 
 ## Ungrouped / raw keymaps
 

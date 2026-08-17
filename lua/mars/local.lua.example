@@ -16,7 +16,13 @@
 -- require("mars.ui.borders").setup()
 
 -- Floating terminal (lazygit/scooter) size as fractions of the editor.
--- vim.g.mars_term_size = { width = 0.9, height = 0.9 }
+-- vim.g.mars_float_terminal_size = { width = 0.9, height = 0.9 }
+
+-- Generic terminal size: `<leader>tt` horizontal split height and `<leader>tv`
+-- vertical split width, as fractions of the editor (default 40% each). A
+-- separate knob from `mars_float_terminal_size` (which sizes the float
+-- terminals).
+-- vim.g.mars_split_terminal_size = { height = 0.4, width = 0.4 }
 
 -- fzf-lua picker window size as fractions of the editor.
 -- vim.g.mars_fzf_size = { width = 0.8, height = 0.85 }
