@@ -172,10 +172,10 @@ local dashboard_row_actions = {}
 
 --- Description half of a menu line: icon (if any) plus label.
 ---@param action mars.dashboard.Action
----@return string desc, string key_hl, string desc_hl
+---@return string desc
 local function format_action(action)
   local icon = vim.g.have_nerd_font and (action.icon .. "  ") or ""
-  return icon .. action.desc, "Special", "Directory"
+  return icon .. action.desc
 end
 
 --- Builds the (unpadded) content lines plus per-line highlight ranges.
@@ -229,14 +229,14 @@ local function build_content()
     add("MarsDashboardHeader")
     table.insert(lines, "")
     for _, action in ipairs(actions) do
-      local desc, key_hl, desc_hl = format_action(action)
+      local desc = format_action(action)
       local gap = desc_width - vim.fn.strdisplaywidth(desc) + 2 -- 2-space minimum gap before the key
       local text = desc .. (" "):rep(gap) .. action.key
       table.insert(lines, text)
       table.insert(menu_items, { line = #lines, run = action.run })
       -- Extmark columns are byte offsets; #desc and #action.key are correct here.
-      add(desc_hl, 0, #desc)
-      add(key_hl, #text - #action.key, -1)
+      add("Directory", 0, #desc)
+      add("Special", #text - #action.key, -1)
     end
     table.insert(lines, "")
   end
