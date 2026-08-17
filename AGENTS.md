@@ -35,7 +35,10 @@ The defining constraint: read before adding anything.
   (LSP), `vim.lsp.completion` (completion), `vim.snippet` (snippets),
   `vim.o.statusline`/`vim.o.winbar` (UI), `vim.pack` (plugins),
   `:mksession` (sessions), `vim.diagnostic.*` (diagnostics), netrw (file
-  browsing), `:grep`/quickfix (search).
+  browsing), `:grep`/quickfix (search), `jobstart`+`term`/`nvim_open_term`
+  (terminals: `lua/mars/helpers/term.lua` is the shared native manager
+  powering the generic `<leader>t` shell, lazygit, scooter, and opencode;
+  snacks.terminal was considered and declined as a whole-plugin dependency).
 - **Add a plugin only when it is genuinely singular-purpose and materially
   hard to reproduce natively**: not merely convenient. Check native
   coverage first; prefer a small first-party module over a new dependency.
