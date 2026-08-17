@@ -6,9 +6,6 @@ local M = {}
 
 local term = require("mars.helpers.term")
 
----@type mars.helpers.term.State
-local state = { win = nil, buf = nil, job = nil }
-
 local augroup = vim.api.nvim_create_augroup("mars_lazygit", { clear = true })
 
 --- Cached `lazygit --print-config-dir`: nil until looked up once, then the
@@ -39,35 +36,33 @@ local function editor_config_arg()
   return override
 end
 
+---@return string[]
+local function cmd()
+  return { "lazygit", "--use-config-file", editor_config_arg() }
+end
+
 --- Opens lazygit in a centered floating window, reusing the existing one if
 --- already open. Notifies instead of opening an empty terminal when lazygit
 --- isn't installed.
 function M.open()
-  if term.focus(state) then
-    vim.cmd.startinsert()
-    return
-  end
-
   if vim.fn.executable("lazygit") == 0 then
     vim.notify("lazygit not found on PATH; install it to use :MarsLazygit", vim.log.levels.ERROR)
     return
   end
 
-  local win = term.open(state, {
-    cmd = { "lazygit", "--use-config-file", editor_config_arg() },
+  term.open({
+    cmd = cmd(),
     cwd = vim.fs.root(0, ".git") or vim.uv.cwd(),
     win_config = term.float_geometry(),
+    count = 1,
   })
-  if win then
-    vim.cmd.startinsert()
-  end
 end
 
 vim.api.nvim_create_autocmd("VimResized", {
   group = augroup,
   desc = "Keep the lazygit float centered and sized to the current window",
   callback = function()
-    term.recenter(state, term.float_geometry())
+    term.recenter({ cmd = cmd(), count = 1 }, term.float_geometry())
   end,
 })
 

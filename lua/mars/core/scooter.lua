@@ -7,13 +7,18 @@ local M = {}
 
 local term = require("mars.helpers.term")
 
----@type mars.helpers.term.State & { root: string? }
-local state = { win = nil, buf = nil, job = nil, root = nil }
-
 local augroup = vim.api.nvim_create_augroup("mars_scooter", { clear = true })
 
 local EDITOR_COMMAND =
   [[nvim --server $NVIM --remote-send '<cmd>lua require("mars.core.scooter").jump_to_result("%file", %line)<CR>']]
+
+--- The root scooter last searched, for resolving relative paths in
+--- `jump_to_result`. `last_cmd` tracks the exact launch args so a re-launch
+--- with pre-filled fields can close the previous session.
+---@type string|nil
+local root = nil
+---@type string[]|nil
+local last_cmd = nil
 
 --- Called back by scooter (see `EDITOR_COMMAND`) when a result is opened
 --- with `e`. Relative paths resolve against the root scooter searched; the
@@ -22,48 +27,48 @@ local EDITOR_COMMAND =
 ---@param line integer
 function M.jump_to_result(file_path, line)
   local target = file_path
-  if not vim.startswith(target, "/") and state.root then
-    target = vim.fs.joinpath(state.root, file_path)
+  if not vim.startswith(target, "/") and root then
+    target = vim.fs.joinpath(root, file_path)
   end
 
   vim.cmd.tabedit(vim.fn.fnameescape(target))
   pcall(vim.api.nvim_win_set_cursor, 0, { line, 0 })
 end
 
---- Opens scooter in a centered floating window. Any already-running session
---- is closed first when `extra_args` is given (pre-filled fields can't be
---- applied to a session already in progress); otherwise an existing window
---- is just refocused. Notifies instead of opening an empty terminal when
---- scooter isn't installed.
+---@param extra_args string[]
+---@return string[]
+local function cmd(extra_args)
+  local c = { "scooter", "--editor-command", EDITOR_COMMAND }
+  vim.list_extend(c, extra_args)
+  return c
+end
+
+--- Opens scooter in a centered floating window. A launch with `extra_args`
+--- (pre-filled search fields) closes any previous scooter session first;
+--- those fields can't be applied to a session already in progress; a plain
+--- relaunch just refocuses. Notifies instead of opening an empty terminal
+--- when scooter isn't installed.
 ---@param extra_args string[]? Extra CLI args, e.g. to pre-populate search text.
 local function start(extra_args)
-  if extra_args and term.win(state) then
-    term.close(state)
-  end
-
-  if term.focus(state) then
-    vim.cmd.startinsert()
-    return
-  end
-
   if vim.fn.executable("scooter") == 0 then
     vim.notify("scooter not found on PATH; install it to use :MarsScooter", vim.log.levels.ERROR)
     return
   end
 
-  state.root = vim.fs.root(0, ".git") or vim.uv.cwd()
-
-  local cmd = { "scooter", "--editor-command", EDITOR_COMMAND }
-  vim.list_extend(cmd, extra_args or {})
-
-  local win = term.open(state, {
-    cmd = cmd,
-    cwd = state.root,
-    win_config = term.float_geometry(),
-  })
-  if win then
-    vim.cmd.startinsert()
+  if extra_args and last_cmd and term.get({ cmd = last_cmd, count = 1 }) then
+    term.close({ cmd = last_cmd, count = 1 })
   end
+
+  local c = cmd(extra_args or {})
+  last_cmd = c
+  root = vim.fs.root(0, ".git") or vim.uv.cwd()
+
+  term.open({
+    cmd = c,
+    cwd = root,
+    win_config = term.float_geometry(),
+    count = 1,
+  })
 end
 
 --- Opens scooter in the project root.
@@ -91,7 +96,7 @@ vim.api.nvim_create_autocmd("VimResized", {
   group = augroup,
   desc = "Keep the scooter float centered and sized to the current window",
   callback = function()
-    term.recenter(state, term.float_geometry())
+    term.recenter({ cmd = last_cmd or cmd({}), count = 1 }, term.float_geometry())
   end,
 })
 
