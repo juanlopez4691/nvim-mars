@@ -52,62 +52,33 @@ vim.keymap.set("i", "<C-b>", scroll_preview("<C-b>", "normal! \2"), { expr = tru
 
 -- Item decoration
 
--- Kind icons gated on vim.g.have_nerd_font, read per request (never cached).
-local KIND_ICONS = {
-  Text = "󰉿",
-  Method = "󰆧",
-  Function = "󰊕",
-  Constructor = "󰒓",
-  Field = "󰜢",
-  Variable = "󰀫",
-  Class = "󰠱",
-  Interface = "󱡠",
-  Module = "󰅩",
-  Property = "󰜢",
-  Unit = "󰑭",
-  Value = "󰎠",
-  Enum = "󰦨",
-  Keyword = "󰌋",
-  Snippet = "󱄽",
-  Color = "󰏘",
-  File = "󰈙",
-  Reference = "󰈇",
-  Folder = "󰉋",
-  EnumMember = "󰦨",
-  Constant = "󰏿",
-  Struct = "󰙅",
-  Event = "󱐋",
-  Operator = "󰆕",
-  TypeParameter = "󰬛",
-}
-
--- Kind-to-highlight map, tinting the label like colorful-menu does for
--- blink.cmp. Undefined groups render as plain text.
-local KIND_HLGROUPS = {
-  Method = "@function",
-  Function = "@function",
-  Constructor = "@constructor",
-  Field = "@property",
-  Property = "@property",
-  Variable = "@variable",
-  Class = "@type",
-  Interface = "@type",
-  Struct = "@type",
-  Enum = "@type",
-  TypeParameter = "@type",
-  EnumMember = "@constant",
-  Constant = "@constant",
-  Value = "@constant",
-  Unit = "@number",
-  Keyword = "@keyword",
-  Operator = "@operator",
-  Event = "@operator",
-  Module = "@module",
-  File = "@string.special.path",
-  Folder = "@string.special.path",
-  Color = "@constant",
-  Snippet = "@string.special",
-  Reference = "@markup.link",
+-- Kind decoration: icon (Nerd Font only) + optional label tint; undefined groups render as plain text.
+local KINDS = {
+  Text = { icon = "󰉿" },
+  Method = { icon = "󰆧", hl = "@function" },
+  Function = { icon = "󰊕", hl = "@function" },
+  Constructor = { icon = "󰒓", hl = "@constructor" },
+  Field = { icon = "󰜢", hl = "@property" },
+  Variable = { icon = "󰀫", hl = "@variable" },
+  Class = { icon = "󰠱", hl = "@type" },
+  Interface = { icon = "󱡠", hl = "@type" },
+  Module = { icon = "󰅩", hl = "@module" },
+  Property = { icon = "󰜢", hl = "@property" },
+  Unit = { icon = "󰑭", hl = "@number" },
+  Value = { icon = "󰎠", hl = "@constant" },
+  Enum = { icon = "󰦨", hl = "@type" },
+  Keyword = { icon = "󰌋", hl = "@keyword" },
+  Snippet = { icon = "󱄽", hl = "@string.special" },
+  Color = { icon = "󰏘", hl = "@constant" },
+  File = { icon = "󰈙", hl = "@string.special.path" },
+  Reference = { icon = "󰈇", hl = "@markup.link" },
+  Folder = { icon = "󰉋", hl = "@string.special.path" },
+  EnumMember = { icon = "󰦨", hl = "@constant" },
+  Constant = { icon = "󰏿", hl = "@constant" },
+  Struct = { icon = "󰙅", hl = "@type" },
+  Event = { icon = "󱐋", hl = "@operator" },
+  Operator = { icon = "󰆕", hl = "@operator" },
+  TypeParameter = { icon = "󰬛", hl = "@type" },
 }
 
 local KIND_NAMES = vim.lsp.protocol.CompletionItemKind
@@ -119,19 +90,19 @@ local DEPRECATED = vim.lsp.protocol.CompletionTag.Deprecated
 ---@return table
 local function convert_item(item)
   local kind_name = KIND_NAMES[item.kind] or "Text"
+  local kind = KINDS[kind_name] or KINDS.Text
   local converted = { menu = "[LSP]" }
 
   if vim.g.have_nerd_font then
-    local icon = KIND_ICONS[kind_name] or KIND_ICONS.Text
     local detail = vim.tbl_get(item, "labelDetails", "detail") or ""
-    converted.abbr = ("%s %s%s"):format(icon, item.label, detail)
+    converted.abbr = ("%s %s%s"):format(kind.icon, item.label, detail)
     converted.kind = ""
   end
 
   -- Don't clobber core's deprecation strikethrough with a kind tint.
   if not (item.deprecated or vim.list_contains(item.tags or {}, DEPRECATED)) then
-    converted.abbr_hlgroup = KIND_HLGROUPS[kind_name]
-    converted.kind_hlgroup = KIND_HLGROUPS[kind_name]
+    converted.abbr_hlgroup = kind.hl
+    converted.kind_hlgroup = kind.hl
   end
 
   return converted
