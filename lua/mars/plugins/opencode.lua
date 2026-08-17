@@ -119,50 +119,50 @@ local function command(name)
 end
 
 -- Ask, by context scope. Each opens an editable prompt pre-filled with the
--- placeholder rather than auto-submitting (see the header note on `ask()`).
-vim.keymap.set({ "n", "x" }, "<leader>oa", ask("@this: "), { desc = "Ask" })
-vim.keymap.set({ "n", "x" }, "<leader>ob", ask("@buffer: "), { desc = "Ask (buffer)…" })
-vim.keymap.set({ "n", "x" }, "<leader>oB", ask("@buffers: "), { desc = "Ask (buffers)…" })
-vim.keymap.set({ "n", "x" }, "<leader>od", ask("@diagnostics: "), { desc = "Ask (diagnostics)…" })
-vim.keymap.set({ "n", "x" }, "<leader>om", ask("@marks: "), { desc = "Ask (marks)…" })
-vim.keymap.set({ "n", "x" }, "<leader>ov", ask("@visible: "), { desc = "Ask (visible)…" })
-vim.keymap.set({ "n", "x" }, "<leader>ox", ask("@quickfix: "), { desc = "Ask (quickfix)…" })
-vim.keymap.set({ "n", "x" }, "<leader>oi", ask(""), { desc = "Ask (empty)…" })
+-- placeholder rather than auto-submitting.
+vim.keymap.set({ "n", "x" }, "<leader>oa", ask("@this: "), { desc = "Ask Opencode…" })
+vim.keymap.set({ "n", "x" }, "<leader>ob", ask("@buffer: "), { desc = "Ask Opencode (buffer)…" })
+vim.keymap.set({ "n", "x" }, "<leader>oB", ask("@buffers: "), { desc = "Ask Opencode (buffers)…" })
+vim.keymap.set({ "n", "x" }, "<leader>od", ask("@diagnostics: "), { desc = "Ask Opencode (diagnostics)…" })
+vim.keymap.set({ "n", "x" }, "<leader>om", ask("@marks: "), { desc = "Ask Opencode (marks)…" })
+vim.keymap.set({ "n", "x" }, "<leader>ov", ask("@visible: "), { desc = "Ask about visible text" })
+vim.keymap.set({ "n", "x" }, "<leader>ox", ask("@quickfix: "), { desc = "Ask Opencode (quickfix)…" })
+vim.keymap.set({ "n", "x" }, "<leader>oi", ask(""), { desc = "Ask Opencode (empty)" })
+vim.keymap.set({ "n", "x" }, "<leader>oI", ask("@this: "), { desc = "Ask Opencode (context)…" })
 
 -- Prompts: act on `@this` (range/selection, else cursor) immediately. No
 -- trailing space; `prompt()` appends to the TUI input without submitting
--- when the text ends in a space (the "append" contract), so these end in
--- `:` instead.
-vim.keymap.set({ "n", "x" }, "<leader>of", prompt("@this fix:"), { desc = "Fix" })
-vim.keymap.set({ "n", "x" }, "<leader>oe", prompt("@this explain:"), { desc = "Explain" })
-vim.keymap.set({ "n", "x" }, "<leader>or", prompt("@this review:"), { desc = "Review" })
-vim.keymap.set({ "n", "x" }, "<leader>oo", prompt("@this optimize:"), { desc = "Optimize" })
-vim.keymap.set({ "n", "x" }, "<leader>os", prompt("@this test:"), { desc = "Test" })
-vim.keymap.set({ "n", "x" }, "<leader>oD", prompt("@this diagnose:"), { desc = "Diagnose" })
+-- when the text ends in a space.
+vim.keymap.set({ "n", "x" }, "<leader>of", prompt("@this fix:"), { desc = "Fix with Opencode" })
+vim.keymap.set({ "n", "x" }, "<leader>oe", prompt("@this explain:"), { desc = "Explain with Opencode" })
+vim.keymap.set({ "n", "x" }, "<leader>or", prompt("@this review:"), { desc = "Review with Opencode" })
+vim.keymap.set({ "n", "x" }, "<leader>oo", prompt("@this optimize:"), { desc = "Optimize with Opencode" })
+vim.keymap.set({ "n", "x" }, "<leader>os", prompt("@this test:"), { desc = "Test with Opencode" })
+vim.keymap.set({ "n", "x" }, "<leader>oD", prompt("@this diagnose:"), { desc = "Diagnose with Opencode" })
 
 -- Operator-mode: send a motion's range (or the current line) to OpenCode.
 -- `go`/`goo` mirror opencode.nvim's own recommended keymaps; the `<leader>o*`
 -- variants exist alongside them for which-key discoverability.
 vim.keymap.set({ "n", "x" }, "<leader>og", function()
   return require("opencode").operator("@this ")
-end, { expr = true, desc = "Add Range" })
+end, { expr = true, desc = "Add range to Opencode" })
 
 vim.keymap.set("n", "<leader>ol", function()
   return require("opencode").operator("@this ") .. "_"
-end, { expr = true, desc = "Add Line" })
+end, { expr = true, desc = "Add line to Opencode" })
 
 vim.keymap.set({ "n", "x" }, "go", function()
   return require("opencode").operator("@this ")
-end, { expr = true, desc = "OpenCode: Add Range" })
+end, { expr = true, desc = "Add range to Opencode (operator)" })
 
 vim.keymap.set("n", "goo", function()
   return require("opencode").operator("@this ") .. "_"
-end, { expr = true, desc = "OpenCode: Add Line" })
+end, { expr = true, desc = "Add line to Opencode (operator)" })
 
 -- Session management. `session.close` isn't a server command (see header),
 -- so "close" means closing the terminal running the session.
-vim.keymap.set("n", "<leader>on", command("session.new"), { desc = "New Session" })
-vim.keymap.set("n", "<leader>oc", close, { desc = "Close Session" })
+vim.keymap.set("n", "<leader>on", command("session.new"), { desc = "New session" })
+vim.keymap.set("n", "<leader>oc", close, { desc = "Close session" })
 
 -- When a prompt is submitted, bring the opencode terminal into view so the
 -- chat (and its streaming response) is visible, the documented behavior for
@@ -177,14 +177,14 @@ vim.api.nvim_create_autocmd("User", {
 })
 
 -- Terminal: `opencode --port` in a right split (see `open()`/`toggle()`).
-vim.keymap.set("n", "<leader>ot", toggle, { desc = "Toggle Terminal" })
-vim.keymap.set("n", "<leader>oq", close, { desc = "Stop/Close Terminal" })
+vim.keymap.set("n", "<leader>ot", toggle, { desc = "Toggle Opencode" })
+vim.keymap.set("n", "<leader>oq", close, { desc = "Stop/Close OpenCode" })
 
 -- Action/prompt picker.
 vim.keymap.set({ "n", "x" }, "<leader>oX", function()
   require("opencode").select()
-end, { desc = "Execute Action…" })
+end, { desc = "Execute Opencode action…" })
 
 -- Scroll the OpenCode terminal's message pane.
-vim.keymap.set("n", "<leader>ou", command("session.half.page.up"), { desc = "Scroll Up" })
-vim.keymap.set("n", "<leader>oj", command("session.half.page.down"), { desc = "Scroll Down" })
+vim.keymap.set("n", "<leader>ou", command("session.half.page.up"), { desc = "Scroll Opencode up" })
+vim.keymap.set("n", "<leader>oj", command("session.half.page.down"), { desc = "Scroll Opencode down" })
