@@ -153,12 +153,55 @@ local function on_unfolded_dir()
   return next_line ~= "" and tree_depth(next_line) > tree_depth(vim.fn.getline(lnum))
 end
 
---- Triggers netrw's own <CR> handler on the current line; open a file, or
---- toggle a directory's fold. Fed remappably (mode "m") rather than calling
---- a netrw function directly, so whatever netrw bound <CR> to for this
---- listing runs, local or remote.
+--- Last window focused before the sidebar, per tab (see the WinEnter tracker
+--- below); split-opens land there instead of in the netrw window.
+---@type table<integer, integer>
+local last_main = {}
+
+--- Window a split-open should land in: the last non-netrw window focused in
+--- this tab (WinEnter tracker), falling back to the previous window and then
+--- to any non-netrw window. Never the sidebar.
+---@return integer win
+local function split_target()
+  local tab = vim.api.nvim_get_current_tabpage()
+  local target = last_main[tab]
+  if not (target and vim.api.nvim_win_is_valid(target)) then
+    vim.cmd("wincmd p")
+    target = vim.api.nvim_get_current_win()
+  end
+  if vim.bo[vim.api.nvim_win_get_buf(target)].filetype == "netrw" then
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+      if vim.bo[vim.api.nvim_win_get_buf(win)].filetype ~= "netrw" then
+        target = win
+        break
+      end
+    end
+  end
+  return target
+end
+
+--- Netrw's <CR> opens the file into the window `g:netrw_chgwin` names;
+--- pointing it at `target_win` redirects the open there. Netrw reads chgwin
+--- while the <CR> runs, so "x" keeps it in effect through the feed. The
+--- sidebar must be focused when called.
+---@param target_win integer
+local function feed_open(target_win)
+  local prev = vim.g.netrw_chgwin
+  vim.g.netrw_chgwin = vim.fn.win_id2win(target_win)
+  vim.api.nvim_feedkeys(vim.keycode("<CR>"), "mtx", false)
+  vim.g.netrw_chgwin = prev
+end
+
+--- Triggers netrw's own <CR> on the current line, to open a file or toggle
+--- a directory's fold. Fed remappably rather than calling a netrw function,
+--- so local and remote listings both work. File opens land in the last
+--- active window (feed_open) instead of :Lexplore's window 1; the sidebar
+--- is re-asserted since split_target's fallback runs `wincmd p`.
 local function activate()
-  vim.api.nvim_feedkeys(vim.keycode("<CR>"), "m", false)
+  local netrw_win = vim.api.nvim_get_current_win()
+  local target = split_target()
+  vim.api.nvim_set_current_win(netrw_win)
+  feed_open(target)
 end
 
 --- `l`: unfolds the directory under the cursor, or opens the file under
@@ -190,33 +233,6 @@ local function parent_line()
   return nil
 end
 
---- Last window focused before the sidebar, per tab (see the WinEnter tracker
---- below); split-opens land there instead of in the netrw window.
----@type table<integer, integer>
-local last_main = {}
-
---- Window a split-open should land in: the last non-netrw window focused in
---- this tab (WinEnter tracker), falling back to the previous window and then
---- to any non-netrw window. Never the sidebar.
----@return integer win
-local function split_target()
-  local tab = vim.api.nvim_get_current_tabpage()
-  local target = last_main[tab]
-  if not (target and vim.api.nvim_win_is_valid(target)) then
-    vim.cmd("wincmd p")
-    target = vim.api.nvim_get_current_win()
-  end
-  if vim.bo[vim.api.nvim_win_get_buf(target)].filetype == "netrw" then
-    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
-      if vim.bo[vim.api.nvim_win_get_buf(win)].filetype ~= "netrw" then
-        target = win
-        break
-      end
-    end
-  end
-  return target
-end
-
 --- `o`/`v`: open the file under the cursor in a split of the last active
 --- window, never the sidebar. `o` splits horizontally, `v` (netrw's own
 --- vertical-split key) vertically. Netrw's split keys split the netrw window
@@ -239,12 +255,7 @@ local function open_in_split(vertical)
   vim.cmd("enew")
   local split_win = vim.api.nvim_get_current_win()
   vim.api.nvim_set_current_win(netrw_win)
-  local prev = vim.g.netrw_chgwin
-  vim.g.netrw_chgwin = vim.fn.win_id2win(split_win)
-  -- "x" executes immediately (blocking), so netrw reads the chgwin above
-  -- before it is restored.
-  vim.api.nvim_feedkeys(vim.keycode("<CR>"), "mtx", false)
-  vim.g.netrw_chgwin = prev
+  feed_open(split_win)
 end
 
 --- Netrw keymap reference, shown by `?` in the sidebar. Covers the
