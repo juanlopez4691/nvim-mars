@@ -86,7 +86,7 @@ require("mars.pack").on({
       group("<leader>u", "UI toggles"),
       group("<leader>v", "Vim"),
       group("<leader>w", "Window"),
-      group("<leader>y", "Yank"),
+      group("<leader>y", "Copy & Paste"),
     })
   end,
 })

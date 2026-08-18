@@ -25,7 +25,7 @@ F-key), not separate bindings with different behavior.
 - [Search (`<leader>s`)](#search-leaders)
 - [Terminal (`<leader>t`)](#terminal-leadert)
 - [Vim (`<leader>v`)](#vim-leaderv)
-- [Yank (`<leader>y`)](#yank-leadery)
+- [Copy & Paste (`<leader>y`)](#copy--paste--leadery)
 - [Reserved, unused groups](#reserved-unused-groups)
 - [Ungrouped / raw keymaps](#ungrouped--raw-keymaps)
 
@@ -283,24 +283,20 @@ than at the filesystem or text being edited.
 | `<leader>vc`  | n    | fzf-lua: command history       |
 | `<leader>v"`  | n    | fzf-lua: registers             |
 
-## Yank (`<leader>y`)
+## Copy & Paste (`<leader>y`)
 
 Source: [`lua/mars/core/clipboard.lua`](lua/mars/core/clipboard.lua) and
 [`lua/mars/plugins/fzf-lua.lua`](lua/mars/plugins/fzf-lua.lua). Mars
 sets `clipboard = ""` (not `unnamedplus`) in `core/options.lua`, so plain
 `y`/`p`/`d` never silently touch the system clipboard: these are the
-explicit, opt-in path to the `"+` register.
+explicit, opt-in path to the `"+` register. `<leader>Y` and `<leader>p` sit
+in [Ungrouped / raw keymaps](#ungrouped--raw-keymaps): capital `Y` is a
+separate top-level key, and `p` isn't under the `y` prefix.
 
 | Key           | Mode    | Action                                    |
 | ------------- | ------- | --------------------------------------------- |
-| `<leader>y`   | n, v, x | Yank to the system clipboard                 |
-| `<leader>yy`  | n       | Yank the current line to the system clipboard |
-
-See also `<leader>Y` and `<leader>p` in
-[Ungrouped / raw keymaps](#ungrouped--raw-keymaps): both live in the same
-file and are thematically part of "yank/paste to clipboard," but neither is
-a sub-key of the `<leader>y` which-key group (capital `Y` is a separate
-top-level key, and `p` doesn't fall under the `y` group at all).
+| `<leader>y`   | n       | Yank the current line to the system clipboard |
+| `<leader>y`   | v, x    | Yank the selection to the system clipboard    |
 
 ## Reserved, unused groups
 
