@@ -15,7 +15,7 @@ local ICONS = {
   wrench = "",
 }
 
-local HEADER = vim.split(
+local DEFAULT_HEADER = vim.split(
   [[
  __    __             __       __
 /  \  /  |           /  \     /  |
@@ -31,28 +31,33 @@ local HEADER = vim.split(
   { trimempty = true }
 )
 
--- Right-pad all header lines to equal width: per-line centering would
--- otherwise misalign the letterforms, and trailing whitespace in the raw
--- string literal isn't reliably preserved.
-do
+--- Header lines from `vim.g.mars_dashboard_header`, right-padded to equal
+--- width so centering keeps the letterforms aligned. Read at draw time
+--- (local.lua loads after this module).
+---@return string[]
+local function header_lines()
+  local lines = vim.g.mars_dashboard_header or DEFAULT_HEADER
   local max_width = 0
-  for _, line in ipairs(HEADER) do
+  for _, line in ipairs(lines) do
     max_width = math.max(max_width, vim.fn.strdisplaywidth(line))
   end
-  for i, line in ipairs(HEADER) do
-    HEADER[i] = line .. (" "):rep(max_width - vim.fn.strdisplaywidth(line))
+  local padded = {}
+  for i, line in ipairs(lines) do
+    padded[i] = line .. (" "):rep(max_width - vim.fn.strdisplaywidth(line))
   end
+  return padded
+end
+
+local function apply_header_hl()
+  vim.api.nvim_set_hl(0, "MarsDashboardHeader", { fg = vim.g.mars_dashboard_header_color or "#c1440e", bold = true })
 end
 
 -- Dedicated group (not "Title") so recoloring can't affect other "Title"
 -- users; re-applied on ColorScheme since the color is hardcoded.
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("mars_dashboard_header", { clear = true }),
-  callback = function()
-    vim.api.nvim_set_hl(0, "MarsDashboardHeader", { fg = "#c1440e", bold = true })
-  end,
+  callback = apply_header_hl,
 })
-vim.api.nvim_set_hl(0, "MarsDashboardHeader", { fg = "#c1440e", bold = true })
 
 --- Time-of-day greeting for the logged-in user.
 ---@return string
@@ -200,7 +205,7 @@ local function build_content()
     })
   end
 
-  for _, line in ipairs(HEADER) do
+  for _, line in ipairs(header_lines()) do
     table.insert(lines, line)
     add("MarsDashboardHeader")
   end
@@ -288,6 +293,9 @@ local function render()
   end
 
   local lines, highlights, header_count, menu_items = build_content()
+  -- Re-apply at draw time: local.lua (which may set the color) loads after
+  -- this module, and render() runs after it on VimEnter.
+  apply_header_hl()
   local win_width = vim.api.nvim_win_get_width(win)
   local win_height = vim.api.nvim_win_get_height(win)
   local top_margin = math.max(0, math.floor((win_height - #lines) / 2))
@@ -301,9 +309,9 @@ local function render()
     dashboard_row_actions[row] = item.run
   end
 
-  local header_lines = { unpack(lines, 1, header_count) }
+  local header_block = { unpack(lines, 1, header_count) }
   local menu_lines = { unpack(lines, header_count + 1, #lines) }
-  local header_width = block_width(header_lines)
+  local header_width = block_width(header_block)
   local menu_width = block_width(menu_lines)
   local header_margin = math.max(0, math.floor((win_width - header_width) / 2))
   local menu_margin = math.max(0, math.floor((win_width - menu_width) / 2))

@@ -30,6 +30,11 @@
 -- Disable the start screen shown on a bare `nvim` invocation.
 -- vim.g.mars_dashboard_enabled = false
 
+-- Dashboard header: custom art as a list of lines, and its color. Both fall
+-- back to the defaults when unset.
+-- vim.g.mars_dashboard_header = { "  hello, mars  " }
+-- vim.g.mars_dashboard_header_color = "#c1440e"
+
 -- Side the file explorer sidebar opens on: "left" (default) | "right"
 -- vim.g.mars_explorer_position = "right"
 
