@@ -118,52 +118,52 @@ vim.api.nvim_create_autocmd("VimResized", {
 
 vim.keymap.set("n", "<C-h>", function()
   move("h")
-end, { silent = true, desc = "Window: focus left, wrapping" })
+end, { silent = true, desc = "Focus left, wrapping" })
 vim.keymap.set("n", "<C-j>", function()
   move("j")
-end, { silent = true, desc = "Window: focus down, wrapping" })
+end, { silent = true, desc = "Focus down, wrapping" })
 vim.keymap.set("n", "<C-k>", function()
   move("k")
-end, { silent = true, desc = "Window: focus up, wrapping" })
+end, { silent = true, desc = "Focus up, wrapping" })
 vim.keymap.set("n", "<C-l>", function()
   move("l")
-end, { silent = true, desc = "Window: focus right, wrapping" })
+end, { silent = true, desc = "Focus right, wrapping" })
 
 for _, key in ipairs({ "<A-Left>", "<C-A-h>" }) do
   vim.keymap.set("n", key, function()
     resize("left")
-  end, { silent = true, desc = "Window: resize left" })
+  end, { silent = true, desc = "Resize left" })
 end
 for _, key in ipairs({ "<A-Right>", "<C-A-l>" }) do
   vim.keymap.set("n", key, function()
     resize("right")
-  end, { silent = true, desc = "Window: resize right" })
+  end, { silent = true, desc = "Resize right" })
 end
 for _, key in ipairs({ "<A-Up>", "<C-A-k>" }) do
   vim.keymap.set("n", key, function()
     resize("up")
-  end, { silent = true, desc = "Window: resize up" })
+  end, { silent = true, desc = "Resize up" })
 end
 for _, key in ipairs({ "<A-Down>", "<C-A-j>" }) do
   vim.keymap.set("n", key, function()
     resize("down")
-  end, { silent = true, desc = "Window: resize down" })
+  end, { silent = true, desc = "Resize down" })
 end
 
 -- The <C-w> split/close commands under <leader>w; the suffix letter matches
 -- the <C-w> one (<leader>wv = :vsplit = <C-w>v), for a thumb-reachable
 -- second way to run them. The native <C-w> maps are left untouched.
 for suffix, spec in pairs({
-  v = { cmd = "vsplit", desc = "Window: split vertically" },
-  s = { cmd = "split", desc = "Window: split horizontally" },
-  n = { cmd = "new", desc = "Window: new empty split" },
-  c = { cmd = "close", desc = "Window: close current split" },
-  o = { cmd = "only", desc = "Window: close other splits" },
-  q = { cmd = "quit", desc = "Window: quit current split" },
+  v = { cmd = "vsplit", desc = "Split vertically" },
+  s = { cmd = "split", desc = "Split horizontally" },
+  n = { cmd = "new", desc = "New empty split" },
+  c = { cmd = "close", desc = "Close current split" },
+  o = { cmd = "only", desc = "Close other splits" },
+  q = { cmd = "quit", desc = "Quit current split" },
 }) do
   vim.keymap.set("n", "<leader>w" .. suffix, ("<Cmd>%s<CR>"):format(spec.cmd), {
     silent = true,
     desc = spec.desc,
   })
 end
-vim.keymap.set("n", "<leader>w=", equalize, { silent = true, desc = "Window: equalize splits" })
+vim.keymap.set("n", "<leader>w=", equalize, { silent = true, desc = "Equalize splits" })
