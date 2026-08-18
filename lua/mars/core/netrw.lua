@@ -495,13 +495,13 @@ vim.api.nvim_create_autocmd("FileType", {
             open_in_split(false)
           end, {
             buffer = buf,
-            desc = "Explorer: horizontal split (last window)",
+            desc = "Explorer: horizontal split",
           })
           vim.keymap.set("n", "v", function()
             open_in_split(true)
           end, {
             buffer = buf,
-            desc = "Explorer: vertical split (last window)",
+            desc = "Explorer: vertical split",
           })
           if queued then
             return
