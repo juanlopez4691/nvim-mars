@@ -23,13 +23,25 @@ local typescript_settings = {
 return {
   cmd = { "vtsls", "--stdio" },
   commands = {
-    ["_typescript.moveToFileRefactoring"] = function(result, ctx)
-      ---@type vim.lsp.ApplyWorkspaceEditParams
-      local params = {
-        edit = result.edit,
-        label = result.label,
-      }
-      vim.lsp.util.apply_workspace_edit(params, ctx.client_id)
+    ["_typescript.moveToFileRefactoring"] = function(command, ctx)
+      local client = assert(vim.lsp.get_client_by_id(ctx.client_id))
+      vim.ui.input({ prompt = "Move to file: ", default = vim.fn.expand("%:p") }, function(target)
+        if not target or target == "" then
+          return
+        end
+        local arguments = command.arguments or {}
+        arguments[#arguments + 1] = vim.fn.fnamemodify(target, ":p")
+        client:request("workspace/executeCommand", {
+          command = command.command,
+          arguments = arguments,
+        }, function(err, result)
+          if err then
+            vim.notify(("vtsls move-to-file failed: %s"):format(err.message), vim.log.levels.ERROR)
+            return
+          end
+          vim.lsp.util.apply_workspace_edit(result, client.offset_encoding)
+        end)
+      end)
     end,
   },
   init_options = {
