@@ -160,6 +160,10 @@ for suffix, spec in pairs({
   c = { cmd = "close", desc = "Close current split" },
   o = { cmd = "only", desc = "Close other splits" },
   q = { cmd = "quit", desc = "Quit current split" },
+  H = { cmd = "wincmd H", desc = "Move to far left" },
+  J = { cmd = "wincmd J", desc = "Move to bottom" },
+  K = { cmd = "wincmd K", desc = "Move to top" },
+  L = { cmd = "wincmd L", desc = "Move to far right" },
 }) do
   vim.keymap.set("n", "<leader>w" .. suffix, ("<Cmd>%s<CR>"):format(spec.cmd), {
     silent = true,
