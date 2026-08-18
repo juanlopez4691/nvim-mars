@@ -72,7 +72,7 @@ end
 
 M.use = use
 
--- Find
+-- Find: files to open and places to jump to.
 vim.keymap.set(
   "n",
   "<leader>ff",
@@ -80,15 +80,6 @@ vim.keymap.set(
     fzf_lua.files()
   end),
   { silent = true, desc = "Files" }
-)
-
-vim.keymap.set(
-  "n",
-  "<leader>fg",
-  use(function(fzf_lua)
-    fzf_lua.live_grep()
-  end),
-  { silent = true, desc = "Live Grep" }
 )
 
 vim.keymap.set(
@@ -107,6 +98,35 @@ vim.keymap.set(
     fzf_lua.oldfiles()
   end),
   { silent = true, desc = "Recent" }
+)
+
+-- Catch-all meta-picker: lists every registered fzf-lua picker as a fuzzable
+-- entry, so the rest of these keymaps are discoverable from one place.
+vim.keymap.set(
+  "n",
+  "<leader>fk",
+  use(function(fzf_lua)
+    fzf_lua.builtin()
+  end),
+  { silent = true, desc = "All Pickers" }
+)
+
+vim.keymap.set(
+  "n",
+  "<leader>fm",
+  use(function(fzf_lua)
+    fzf_lua.marks()
+  end),
+  { silent = true, desc = "Marks" }
+)
+
+vim.keymap.set(
+  "n",
+  "<leader>fj",
+  use(function(fzf_lua)
+    fzf_lua.jumps()
+  end),
+  { silent = true, desc = "Jumps" }
 )
 
 -- Git
@@ -137,15 +157,14 @@ vim.keymap.set(
   { silent = true, desc = "Branches" }
 )
 
--- Catch-all meta-picker: lists every registered fzf-lua picker as a fuzzable
--- entry, so the rest of these keymaps are discoverable from one place.
+-- Search: text search.
 vim.keymap.set(
   "n",
-  "<leader>fk",
+  "<leader>sg",
   use(function(fzf_lua)
-    fzf_lua.builtin()
+    fzf_lua.live_grep()
   end),
-  { silent = true, desc = "All Pickers" }
+  { silent = true, desc = "Live Grep" }
 )
 
 -- Grep word/selection; `sw` scopes to the project root, `sW` stays in the
@@ -217,15 +236,7 @@ vim.keymap.set(
   { silent = true, desc = "Buffer lines" }
 )
 
--- Command/search history
-vim.keymap.set(
-  "n",
-  "<leader>sc",
-  use(function(fzf_lua)
-    fzf_lua.command_history()
-  end),
-  { silent = true, desc = "Command history" }
-)
+-- Search history / resume the last picker.
 vim.keymap.set(
   "n",
   "<leader>s/",
@@ -233,76 +244,6 @@ vim.keymap.set(
     fzf_lua.search_history()
   end),
   { silent = true, desc = "Search history" }
-)
-
--- Help / man pages
-vim.keymap.set(
-  "n",
-  "<leader>sh",
-  use(function(fzf_lua)
-    fzf_lua.helptags()
-  end),
-  { silent = true, desc = "Help pages" }
-)
-vim.keymap.set(
-  "n",
-  "<leader>sM",
-  use(function(fzf_lua)
-    fzf_lua.man_pages()
-  end),
-  { silent = true, desc = "Man pages" }
-)
-
--- Registers / marks / jumps
-vim.keymap.set(
-  "n",
-  '<leader>s"',
-  use(function(fzf_lua)
-    fzf_lua.registers()
-  end),
-  { silent = true, desc = "Registers" }
-)
-vim.keymap.set(
-  "n",
-  "<leader>sm",
-  use(function(fzf_lua)
-    fzf_lua.marks()
-  end),
-  { silent = true, desc = "Marks" }
-)
-vim.keymap.set(
-  "n",
-  "<leader>sj",
-  use(function(fzf_lua)
-    fzf_lua.jumps()
-  end),
-  { silent = true, desc = "Jumps" }
-)
-
--- Autocmds / commands / keymaps / resume / undo history
-vim.keymap.set(
-  "n",
-  "<leader>sa",
-  use(function(fzf_lua)
-    fzf_lua.autocmds()
-  end),
-  { silent = true, desc = "Autocmds" }
-)
-vim.keymap.set(
-  "n",
-  "<leader>sC",
-  use(function(fzf_lua)
-    fzf_lua.commands()
-  end),
-  { silent = true, desc = "Commands" }
-)
-vim.keymap.set(
-  "n",
-  "<leader>sk",
-  use(function(fzf_lua)
-    fzf_lua.keymaps()
-  end),
-  { silent = true, desc = "Keymaps" }
 )
 vim.keymap.set(
   "n",
@@ -312,13 +253,71 @@ vim.keymap.set(
   end),
   { silent = true, desc = "Resume last picker" }
 )
+
+-- Vim: pickers over Vim's own docs and state.
 vim.keymap.set(
   "n",
-  "<leader>su",
+  "<leader>vh",
+  use(function(fzf_lua)
+    fzf_lua.helptags()
+  end),
+  { silent = true, desc = "Help pages" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>vM",
+  use(function(fzf_lua)
+    fzf_lua.man_pages()
+  end),
+  { silent = true, desc = "Man pages" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>vu",
   use(function(fzf_lua)
     fzf_lua.undotree()
   end),
   { silent = true, desc = "Undo history" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>va",
+  use(function(fzf_lua)
+    fzf_lua.autocmds()
+  end),
+  { silent = true, desc = "Autocmds" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>vC",
+  use(function(fzf_lua)
+    fzf_lua.commands()
+  end),
+  { silent = true, desc = "Commands" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>vk",
+  use(function(fzf_lua)
+    fzf_lua.keymaps()
+  end),
+  { silent = true, desc = "Keymaps" }
+)
+vim.keymap.set(
+  "n",
+  "<leader>vc",
+  use(function(fzf_lua)
+    fzf_lua.command_history()
+  end),
+  { silent = true, desc = "Command history" }
+)
+vim.keymap.set(
+  "n",
+  '<leader>v"',
+  use(function(fzf_lua)
+    fzf_lua.registers()
+  end),
+  { silent = true, desc = "Registers" }
 )
 
 -- Code

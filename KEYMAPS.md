@@ -24,6 +24,7 @@ F-key), not separate bindings with different behavior.
 - [Replace (`<leader>r`)](#replace-leaderr)
 - [Search (`<leader>s`)](#search-leaders)
 - [Terminal (`<leader>t`)](#terminal-leadert)
+- [Vim (`<leader>v`)](#vim-leaderv)
 - [Yank (`<leader>y`)](#yank-leadery)
 - [Reserved, unused groups](#reserved-unused-groups)
 - [Ungrouped / raw keymaps](#ungrouped--raw-keymaps)
@@ -82,10 +83,11 @@ fzf-lua's own `setup()` runs lazily, on the first picker invocation.
 | Key           | Mode | Action                  |
 | ------------- | ---- | -------------------------- |
 | `<leader>ff`  | n    | fzf-lua: find files      |
-| `<leader>fg`  | n    | fzf-lua: live grep       |
 | `<leader>fb`  | n    | fzf-lua: open buffers    |
 | `<leader>fr`  | n    | fzf-lua: recent files (oldfiles) |
 | `<leader>fk`  | n    | fzf-lua: all pickers (catch-all menu) |
+| `<leader>fm`  | n    | fzf-lua: marks           |
+| `<leader>fj`  | n    | fzf-lua: jumps           |
 
 ## Git (`<leader>g`)
 
@@ -220,13 +222,14 @@ though it lives in the same file and is conceptually related.
 ## Search (`<leader>s`)
 
 Source: [`lua/mars/core/scooter.lua`](lua/mars/core/scooter.lua) and
-[`lua/mars/plugins/fzf-lua.lua`](lua/mars/plugins/fzf-lua.lua). The group
-combines the find-and-replace tool (scooter) with the fzf-lua search
-pickers. `ss` opens scooter in a centered floating terminal; the rest open
-fzf-lua pickers.
+[`lua/mars/plugins/fzf-lua.lua`](lua/mars/plugins/fzf-lua.lua). Text search:
+live grep, grep of the word/selection or open buffers, plus scooter (find and
+replace) and search-history/resume. `ss` opens scooter in a centered floating
+terminal; the rest open fzf-lua pickers.
 
 | Key           | Mode | Action                                                       |
 | ------------- | ---- | ----------------------------------------------------------------- |
+| `<leader>sg`  | n    | fzf-lua: live grep (project-wide)                            |
 | `<leader>ss`  | n    | Open scooter, rooted at the project root                          |
 | `<leader>ss`  | v    | Open scooter pre-populated with the visual selection as a fixed-string search term |
 | `<leader>sw`  | n    | fzf-lua: grep the word under the cursor, scoped to the project root |
@@ -235,18 +238,8 @@ fzf-lua pickers.
 | `<leader>sW`  | x    | fzf-lua: grep the visual selection, in the cwd                   |
 | `<leader>sB`  | n    | fzf-lua: grep across open buffers (rg over named buffers)        |
 | `<leader>sb`  | n    | fzf-lua: lines of open buffers                                   |
-| `<leader>sc`  | n    | fzf-lua: command history                                         |
 | `<leader>s/`  | n    | fzf-lua: search history                                          |
-| `<leader>sh`  | n    | fzf-lua: help pages (helptags)                                   |
-| `<leader>sM`  | n    | fzf-lua: man pages                                               |
-| `<leader>s"`  | n    | fzf-lua: registers                                               |
-| `<leader>sm`  | n    | fzf-lua: marks                                                   |
-| `<leader>sj`  | n    | fzf-lua: jumps                                                   |
-| `<leader>sa`  | n    | fzf-lua: autocmds                                                |
-| `<leader>sC`  | n    | fzf-lua: commands                                                |
-| `<leader>sk`  | n    | fzf-lua: keymaps                                                 |
 | `<leader>sR`  | n    | fzf-lua: resume the last picker                                  |
-| `<leader>su`  | n    | fzf-lua: undo history                                            |
 
 ## Terminal (`<leader>t`)
 
@@ -273,9 +266,27 @@ from inside a terminal navigate to the adjacent split.
 
 Also available as `:MarsTerminal` (the horizontal terminal).
 
+## Vim (`<leader>v`)
+
+Source: [`lua/mars/plugins/fzf-lua.lua`](lua/mars/plugins/fzf-lua.lua).
+Pickers that look into Vim's own documentation and internal state, rather
+than at the filesystem or text being edited.
+
+| Key           | Mode | Action                       |
+| ------------- | ---- | ------------------------------- |
+| `<leader>vh`  | n    | fzf-lua: help pages (helptags) |
+| `<leader>vM`  | n    | fzf-lua: man pages             |
+| `<leader>vu`  | n    | fzf-lua: undo history          |
+| `<leader>va`  | n    | fzf-lua: autocmds              |
+| `<leader>vC`  | n    | fzf-lua: commands              |
+| `<leader>vk`  | n    | fzf-lua: keymaps               |
+| `<leader>vc`  | n    | fzf-lua: command history       |
+| `<leader>v"`  | n    | fzf-lua: registers             |
+
 ## Yank (`<leader>y`)
 
-Source: [`lua/mars/core/clipboard.lua`](lua/mars/core/clipboard.lua). Mars
+Source: [`lua/mars/core/clipboard.lua`](lua/mars/core/clipboard.lua) and
+[`lua/mars/plugins/fzf-lua.lua`](lua/mars/plugins/fzf-lua.lua). Mars
 sets `clipboard = ""` (not `unnamedplus`) in `core/options.lua`, so plain
 `y`/`p`/`d` never silently touch the system clipboard: these are the
 explicit, opt-in path to the `"+` register.
