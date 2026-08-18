@@ -469,6 +469,10 @@ vim.api.nvim_create_autocmd("FileType", {
       buffer = args.buf,
       desc = "Explorer: show keymap help",
     })
+    vim.keymap.set("n", "<Esc>", toggle_explorer, {
+      buffer = args.buf,
+      desc = "Close sidebar",
+    })
 
     -- Netrw rewrites the whole listing on every fold, unfold and refresh,
     -- so the overlay follows the buffer's own changes rather than the
