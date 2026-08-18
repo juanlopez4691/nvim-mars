@@ -281,22 +281,22 @@ than at the filesystem or text being edited.
 | `<leader>vC`  | n    | fzf-lua: commands              |
 | `<leader>vk`  | n    | fzf-lua: keymaps               |
 | `<leader>vc`  | n    | fzf-lua: command history       |
-| `<leader>v"`  | n    | fzf-lua: registers             |
+| `<leader>vr`  | n    | fzf-lua: registers             |
 
 ## Copy & Paste (`<leader>y`)
 
-Source: [`lua/mars/core/clipboard.lua`](lua/mars/core/clipboard.lua) and
-[`lua/mars/plugins/fzf-lua.lua`](lua/mars/plugins/fzf-lua.lua). Mars
+Source: [`lua/mars/core/clipboard.lua`](lua/mars/core/clipboard.lua). Mars
 sets `clipboard = ""` (not `unnamedplus`) in `core/options.lua`, so plain
 `y`/`p`/`d` never silently touch the system clipboard: these are the
-explicit, opt-in path to the `"+` register. `<leader>Y` and `<leader>p` sit
-in [Ungrouped / raw keymaps](#ungrouped--raw-keymaps): capital `Y` is a
-separate top-level key, and `p` isn't under the `y` prefix.
+explicit, opt-in path to the `"+` register.
 
-| Key           | Mode    | Action                                    |
-| ------------- | ------- | --------------------------------------------- |
-| `<leader>y`   | n       | Yank the current line to the system clipboard |
-| `<leader>y`   | v, x    | Yank the selection to the system clipboard    |
+| Key            | Mode    | Action                                    |
+| -------------- | ------- | --------------------------------------------- |
+| `<leader>yy`   | n       | Yank the current line to the system clipboard |
+| `<leader>yy`   | v, x    | Yank the selection to the system clipboard    |
+| `<leader>yY`   | n       | Yank to end of line, to the system clipboard  |
+| `<leader>yp`   | n       | Paste from the system clipboard               |
+| `<leader>yp`   | v, x    | Paste from the system clipboard, replacing the selection |
 
 ## Reserved, unused groups
 
@@ -324,9 +324,6 @@ file/feature.
 
 | Key           | Mode    | Action                                                      |
 | ------------- | ------- | ---------------------------------------------------------------- |
-| `<leader>Y`   | n       | Yank to end of line, to the system clipboard (`"+y$`)            |
-| `<leader>p`   | n       | Paste from the system clipboard                                  |
-| `<leader>p`   | v, x    | Paste from the system clipboard, replacing the selection (deletes selection into the black-hole register first, so the unnamed register isn't clobbered) |
 | `<leader>R`   | n       | Replace every buffer-wide occurrence of the word under the cursor (prompts for replacement, then a confirm-each `:s///gc`) |
 | `<leader>R`   | x       | Replace every buffer-wide occurrence of the visual selection's text (same confirm-each substitution) |
 

@@ -86,7 +86,6 @@ require("mars.pack").on({
       group("<leader>r", "Replace"),
       group("<leader>s", "Search"),
       group("<leader>t", "Terminal"),
-      group("<leader>u", "UI toggles"),
       group("<leader>v", "Vim"),
       group("<leader>w", "Window"),
       group("<leader>y", "Copy & Paste"),

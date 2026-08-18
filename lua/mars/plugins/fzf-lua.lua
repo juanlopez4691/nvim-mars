@@ -313,7 +313,7 @@ vim.keymap.set(
 )
 vim.keymap.set(
   "n",
-  '<leader>v"',
+  "<leader>vr",
   use(function(fzf_lua)
     fzf_lua.registers()
   end),

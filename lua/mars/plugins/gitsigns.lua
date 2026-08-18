@@ -38,10 +38,6 @@ end
 vim.keymap.set("n", "]h", nav_hunk("next"), { silent = true, desc = "Next Hunk" })
 vim.keymap.set("n", "[h", nav_hunk("prev"), { silent = true, desc = "Previous Hunk" })
 
-vim.keymap.set("n", "<leader>uG", function()
-  vim.wo.signcolumn = vim.wo.signcolumn == "no" and "auto:1-2" or "no"
-end, { silent = true, desc = "Toggle signcolumn" })
-
 -- Toggles: staging an already-staged hunk unstages it, so there's no
 -- separate undo mapping.
 vim.keymap.set("n", "<leader>ghs", function()

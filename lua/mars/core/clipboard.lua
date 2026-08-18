@@ -2,15 +2,16 @@
 -- `clipboard = ""`, so plain y/p stay on the unnamed register; these are
 -- the opt-in path to the "+ register.
 
--- Yank to the system clipboard.
-vim.keymap.set("n", "<leader>y", '"+yy', { silent = true, desc = "Yank line to clipboard" })
-vim.keymap.set({ "v", "x" }, "<leader>y", '"+y', { silent = true, desc = "Yank selection to clipboard" })
-vim.keymap.set("n", "<leader>Y", '"+y$', { silent = true, desc = "Yank to end of line to clipboard" })
+-- Copy & Paste group (prefix <leader>y; label in which-key.lua): `y` yanks
+-- the line, `Y` to end of line, `p` pastes.
+vim.keymap.set("n", "<leader>yy", '"+yy', { silent = true, desc = "Yank line to clipboard" })
+vim.keymap.set({ "v", "x" }, "<leader>yy", '"+y', { silent = true, desc = "Yank selection to clipboard" })
+vim.keymap.set("n", "<leader>yY", '"+y$', { silent = true, desc = "Yank to end of line to clipboard" })
 
 -- Visual-mode paste deletes the selection into the unnamed register first,
 -- clobbering a fresh yank; "_d avoids that.
-vim.keymap.set("n", "<leader>p", '"+p', { silent = true, desc = "Paste from clipboard" })
-vim.keymap.set({ "v", "x" }, "<leader>p", '"_d"+P', { silent = true, desc = "Paste replacing selection" })
+vim.keymap.set("n", "<leader>yp", '"+p', { silent = true, desc = "Paste from clipboard" })
+vim.keymap.set({ "v", "x" }, "<leader>yp", '"_d"+P', { silent = true, desc = "Paste replacing selection" })
 
 --- Confirm-each substitution (:s/.../.../gc) of `text` across the buffer.
 ---@param text string
