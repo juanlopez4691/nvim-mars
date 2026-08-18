@@ -84,6 +84,7 @@ require("mars.pack").on({
       group("<leader>s", "Search"),
       group("<leader>t", "Terminal"),
       group("<leader>u", "UI toggles"),
+      group("<leader>w", "Window"),
       group("<leader>y", "Yank"),
     })
   end,
