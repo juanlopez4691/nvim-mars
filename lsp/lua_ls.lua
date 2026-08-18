@@ -29,17 +29,19 @@ return {
       end
     end
 
-    client.config.settings.Lua = vim.tbl_deep_extend("force", client.config.settings.Lua, {
-      runtime = {
-        version = "LuaJIT",
-        path = { "lua/?.lua", "lua/?/init.lua" },
-      },
-      workspace = {
-        checkThirdParty = false,
-        library = { vim.env.VIMRUNTIME },
-      },
-      diagnostics = {
-        globals = { "vim" },
+    client.config.settings = vim.tbl_deep_extend("force", client.config.settings or {}, {
+      Lua = {
+        runtime = {
+          version = "LuaJIT",
+          path = { "lua/?.lua", "lua/?/init.lua" },
+        },
+        workspace = {
+          checkThirdParty = false,
+          library = { vim.env.VIMRUNTIME },
+        },
+        diagnostics = {
+          globals = { "vim" },
+        },
       },
     })
   end,
