@@ -64,7 +64,7 @@ require("mars.pack").on({
     -- which is expected here.
     ---@param lhs string
     ---@param name string
-    ---@return wk.Spec
+    ---@return { [1]: string, group: string }
     local function group(lhs, name)
       local spec = { lhs }
       spec.group = name

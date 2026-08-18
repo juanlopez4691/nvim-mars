@@ -17,13 +17,14 @@ local function find_occurrences(bufnr, word)
 
   for i = 0, line_count - 1 do
     local line = vim.api.nvim_buf_get_lines(bufnr, i, i + 1, false)[1]
-    local s, e = regex:match_str(line)
+    local s, e = regex:match_line(bufnr, i)
     while s do
       occurrences[#occurrences + 1] = { line = i, start_char = s, end_char = e }
       if e >= #line then
         break
       end
-      s, e = regex:match_str(line, e + 1)
+      local rs, re = regex:match_line(bufnr, i, e + 1)
+      s, e = rs and (rs + e + 1), re and (re + e + 1)
     end
   end
 
@@ -87,7 +88,8 @@ end
 --- or an empty input cancels.
 function M.rename()
   local bufnr = vim.api.nvim_get_current_buf()
-  local params = vim.lsp.util.make_position_params(0)
+  local client = vim.lsp.get_clients({ bufnr = bufnr })[1]
+  local params = vim.lsp.util.make_position_params(0, client and client.offset_encoding or "utf-8")
 
   vim.lsp.buf_request(bufnr, prepare_rename_method, params, function(err, result)
     if err or not result then

@@ -76,7 +76,7 @@ local function close()
   term.close(terminal_opts())
 end
 
----@type opencode.Opts
+---@type { server: { start: fun() } }
 vim.g.opencode_opts = {
   server = {
     start = function()

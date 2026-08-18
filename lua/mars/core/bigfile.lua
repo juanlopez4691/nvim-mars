@@ -10,9 +10,6 @@ local MAX_LINES = 5000
 ---@param buf integer
 ---@param file string
 ---@return boolean
----@param buf integer
----@param file string
----@return boolean
 local function is_bigfile(buf, file)
   local filesize = vim.fn.getfsize(file)
   local lines = vim.api.nvim_buf_line_count(buf)

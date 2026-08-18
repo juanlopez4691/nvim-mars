@@ -67,16 +67,6 @@ local FORMATTERS_BY_FT = {
   blade = { formatters = { FORMATTERS.blade_formatter } },
 }
 
---- Runs a single formatter against `lines`, returning its replacement
---- content. Non-stdin formatters get a scratch copy named after the real
---- file, so extension-sensitive tools still detect the right language.
----@param formatter mars.Formatter
----@param resolved string Resolved executable path
----@param lines string[]
----@param filename string Real buffer filename (used for stdin args/detection)
----@return boolean ok
----@return string[]? lines
----@return string? err
 --- Ceiling on how long a formatter may block a save; SystemObj:wait() kills
 --- the process past this (prettierd is a known offender).
 local FORMAT_TIMEOUT_MS = 5000
@@ -87,6 +77,16 @@ local function is_blank(lines)
   return vim.trim(table.concat(lines, "\n")) == ""
 end
 
+--- Runs a single formatter against `lines`, returning its replacement
+--- content. Non-stdin formatters get a scratch copy named after the real
+--- file, so extension-sensitive tools still detect the right language.
+---@param formatter mars.Formatter
+---@param resolved string
+---@param lines string[]
+---@param filename string
+---@return boolean ok
+---@return string[]? lines
+---@return string? err
 local function run_formatter(formatter, resolved, lines, filename)
   local tmp_dir, tmp_file
   if not formatter.stdin then
@@ -180,7 +180,7 @@ local function run_spec(spec, buf, root, lines, filename)
       if not ok then
         return false, nil, formatter.name, err
       end
-      current = output
+      current = output or {}
       applied = formatter.name
       if spec.mode ~= "chain" then
         break

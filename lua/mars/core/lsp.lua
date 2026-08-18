@@ -43,33 +43,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
   end,
 })
 
--- Border is read at runtime from mars.ui.borders so local.lua overrides apply.
-vim.lsp.handlers["textDocument/hover"] = function(err, result, ctx, config)
-  vim.lsp.handlers.hover(
-    err,
-    result,
-    ctx,
-    vim.tbl_extend("keep", config or {}, {
-      border = require("mars.ui.borders").style(),
-      max_width = 80,
-      max_height = 16,
-    })
-  )
-end
-
-vim.lsp.handlers["textDocument/signatureHelp"] = function(err, result, ctx, config)
-  vim.lsp.handlers.signature_help(
-    err,
-    result,
-    ctx,
-    vim.tbl_extend("keep", config or {}, {
-      border = require("mars.ui.borders").style(),
-      max_width = 80,
-      max_height = 12,
-    })
-  )
-end
-
 -- Native LSP defaults (see vim/_core/defaults.lua) carry code-string descs
 -- like "vim.lsp.buf.document_symbol()". Rebinding the same keys to the same
 -- functions with human-readable descs keeps the keys native while making
@@ -80,7 +53,13 @@ vim.keymap.set("n", "gri", vim.lsp.buf.implementation, { desc = "Implementation"
 vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { desc = "Type Definition" })
 vim.keymap.set("n", "grx", vim.lsp.codelens.run, { desc = "Run Codelens" })
 vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { desc = "Document Symbols" })
-vim.keymap.set({ "i", "s" }, "<C-S>", vim.lsp.buf.signature_help, { desc = "Signature Help" })
+vim.keymap.set({ "i", "s" }, "<C-S>", function()
+  vim.lsp.buf.signature_help({
+    border = require("mars.ui.borders").style(),
+    max_width = 80,
+    max_height = 12,
+  })
+end, { desc = "Signature Help" })
 
 -- `K` is bound buffer-locally by core only when an attached client supports
 -- hover and the buffer has no `keywordprg` of its own, so override it the
@@ -95,7 +74,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
       and client:supports_method(vim.lsp.protocol.Methods.textDocument_hover, args.buf)
       and vim.bo[args.buf].keywordprg == ""
     then
-      vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = args.buf, silent = true, desc = "Hover" })
+      vim.keymap.set("n", "K", function()
+        vim.lsp.buf.hover({
+          border = require("mars.ui.borders").style(),
+          max_width = 80,
+          max_height = 16,
+        })
+      end, { buffer = args.buf, silent = true, desc = "Hover" })
     end
   end,
 })
@@ -147,6 +132,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
       client:exec_cmd({
         command = "typescript.goToSourceDefinition",
         arguments = { params.textDocument.uri, params.position },
+        title = "Go to source definition",
       }, { bufnr = ev.buf }, function(err, result)
         if not err then
           open_locations(result, client.offset_encoding)
@@ -160,6 +146,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
       client:exec_cmd({
         command = "typescript.findAllFileReferences",
         arguments = { vim.uri_from_bufnr(ev.buf) },
+        title = "Find all file references",
       }, { bufnr = ev.buf }, function(err, result)
         if not err then
           open_locations(result, client.offset_encoding)
@@ -180,7 +167,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
       })
     end, { buffer = ev.buf, silent = true, desc = "Fix-all diagnostics" })
     vim.keymap.set("n", "<leader>cV", function()
-      vim.lsp.buf.execute_command({ command = "typescript.selectTypeScriptVersion", arguments = {} })
+      client:exec_cmd({
+        command = "typescript.selectTypeScriptVersion",
+        arguments = {},
+        title = "Select TypeScript workspace version",
+      })
     end, { buffer = ev.buf, silent = true, desc = "Select TypeScript workspace version" })
   end,
 })
