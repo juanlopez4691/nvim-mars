@@ -61,13 +61,16 @@ require("mars.pack").on({
 
     -- Leader-key group labels. Keymaps land later alongside the features
     -- that use them; a group with no mappings yet shows an empty entry,
-    -- which is expected here.
+    -- which is expected here. Registered for normal and visual ("x") mode
+    -- alike, so the same label shows whether the leader is pressed from a
+    -- selection or not, instead of a bare "+N keymaps".
     ---@param lhs string
     ---@param name string
-    ---@return { [1]: string, group: string }
+    ---@return { [1]: string, group: string, mode: string[] }
     local function group(lhs, name)
       local spec = { lhs }
       spec.group = name
+      spec.mode = { "n", "x" }
       return spec
     end
 

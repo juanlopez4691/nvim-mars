@@ -14,6 +14,7 @@ require("mars.pack").on({
 
     local hunk_group = { "<leader>gh" }
     hunk_group.group = "Hunk"
+    hunk_group.mode = { "n", "x" }
     require("which-key").add({ hunk_group })
   end,
 })
