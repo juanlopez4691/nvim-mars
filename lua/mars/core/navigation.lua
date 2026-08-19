@@ -43,39 +43,51 @@ local GROUP_TYPES = {
 ---@param types string[]
 ---@return MarsNavigation.Node[]
 local function query_nodes(buf, types)
-  local lang = vim.treesitter.get_lang(buf)
+  local lang = vim.treesitter.language.get_lang(vim.bo[buf].filetype)
   if not lang then
     return {}
   end
 
+  -- One invalid node type fails the whole query, so each pattern is
+  -- probe-parsed and dropped if the grammar doesn't know it.
   local patterns = {}
   for _, t in ipairs(types) do
-    patterns[#patterns + 1] = "(" .. t .. ") @nav"
+    local pattern = "(" .. t .. ") @nav"
+    if pcall(vim.treesitter.query.parse, lang, pattern) then
+      patterns[#patterns + 1] = pattern
+    end
   end
-  local query_str = table.concat(patterns, "\n")
-
-  local ok, query = pcall(vim.treesitter.query.parse, lang, query_str)
-  if not ok then
+  if #patterns == 0 then
     return {}
   end
 
+  local query = vim.treesitter.query.parse(lang, table.concat(patterns, "\n"))
+
   local parser = vim.treesitter.get_parser(buf, lang)
-  local tree = parser:parse({ buf })[1]
+  if not parser then
+    return {}
+  end
+  local tree = parser:parse()[1]
   if not tree then
     return {}
   end
 
   ---@type MarsNavigation.Node[]
   local nodes = {}
+  -- iter_matches maps each capture id to a *list* of nodes (quantified
+  -- captures); every pattern here binds a single node, so take the first.
   for _, match, _ in query:iter_matches(tree:root(), buf) do
-    for _, node in pairs(match) do
-      local sr, sc, er, ec = node:range()
-      nodes[#nodes + 1] = {
-        lnum = sr + 1,
-        col = sc,
-        end_lnum = er + 1,
-        end_col = ec,
-      }
+    for _, node_list in pairs(match) do
+      local node = node_list[1]
+      if node then
+        local sr, sc, er, ec = node:range()
+        nodes[#nodes + 1] = {
+          lnum = sr + 1,
+          col = sc,
+          end_lnum = er + 1,
+          end_col = ec,
+        }
+      end
     end
   end
 
