@@ -14,7 +14,8 @@
   },
   "diagnostics": {
     "globals": [
-      "vim"
+      "vim",
+      "Laravel"
     ],
     "disable": [
       "unresolved-require"

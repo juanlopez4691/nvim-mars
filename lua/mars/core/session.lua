@@ -29,10 +29,21 @@ local function decode(str)
   return vim.uri_decode(str)
 end
 
+--- pcall(vim.cmd, ...) doesn't type-check (vim.cmd is a callable table, not
+--- a function), so the call is wrapped.
+---@param cmd string
+---@return boolean ok
+---@return any err
+local function try_cmd(cmd)
+  return pcall(function()
+    vim.cmd(cmd)
+  end)
+end
+
 ---@param cwd? string Defaults to the current working directory.
 ---@return string
 local function session_path(cwd)
-  return vim.fs.joinpath(session_dir, encode(cwd or vim.uv.cwd()) .. ".vim")
+  return vim.fs.joinpath(session_dir, encode(cwd or vim.uv.cwd() or vim.fn.getcwd()) .. ".vim")
 end
 
 --- Whether the current run is worth persisting: skips runs started with
@@ -75,7 +86,7 @@ function M.save()
   local previous = vim.o.sessionoptions
   vim.o.sessionoptions = SESSION_OPTIONS
 
-  local ok, err = pcall(vim.cmd, ("mksession! %s"):format(vim.fn.fnameescape(session_path())))
+  local ok, err = try_cmd(("mksession! %s"):format(vim.fn.fnameescape(session_path())))
 
   vim.o.sessionoptions = previous
 
@@ -92,7 +103,7 @@ function M.restore()
     return
   end
 
-  local ok, err = pcall(vim.cmd, ("source %s"):format(vim.fn.fnameescape(path)))
+  local ok, err = try_cmd(("source %s"):format(vim.fn.fnameescape(path)))
   if not ok then
     vim.notify(("Failed to restore session: %s"):format(err), vim.log.levels.ERROR)
   end
@@ -116,7 +127,7 @@ function M.restore_last()
     return vim.fn.getftime(a) > vim.fn.getftime(b)
   end)
 
-  local ok, err = pcall(vim.cmd, ("source %s"):format(vim.fn.fnameescape(files[1])))
+  local ok, err = try_cmd(("source %s"):format(vim.fn.fnameescape(files[1])))
   if not ok then
     vim.notify(("Failed to restore session: %s"):format(err), vim.log.levels.ERROR)
   end
@@ -146,7 +157,7 @@ function M.list()
       return
     end
 
-    local ok, err = pcall(vim.cmd, ("source %s"):format(vim.fn.fnameescape(choice.path)))
+    local ok, err = try_cmd(("source %s"):format(vim.fn.fnameescape(choice.path)))
     if not ok then
       vim.notify(("Failed to restore session: %s"):format(err), vim.log.levels.ERROR)
     end

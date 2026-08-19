@@ -112,6 +112,7 @@ local function current_scope(bufnr, row, col)
   if not ok_node or not node then
     return nil
   end
+  ---@type TSNode?
   local current = node
   while current do
     local srow, _, erow, ecol = current:range()
@@ -201,7 +202,7 @@ function M.refresh(winid)
   local scope_col, scope_start, scope_end
   local cursor = vim.api.nvim_win_get_cursor(winid)
   local srow, erow = current_scope(bufnr, cursor[1] - 1, cursor[2])
-  if srow then
+  if srow and erow then
     scope_start, scope_end = srow, erow
     scope_col = scope_column(bufnr, srow, erow, shiftwidth)
   end

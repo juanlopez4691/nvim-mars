@@ -88,7 +88,7 @@ end
 local function picker(name)
   -- selene: allow(global_usage)
   return laravel_entry(function(n)
-    _G.Laravel.pickers[n]()
+    Laravel.pickers[n]()
   end, name)
 end
 
@@ -97,7 +97,7 @@ end
 local function command(name)
   -- selene: allow(global_usage)
   return laravel_entry(function(n)
-    _G.Laravel.commands.run(n)
+    Laravel.commands.run(n)
   end, name)
 end
 
@@ -124,7 +124,7 @@ vim.keymap.set("n", "gf", function()
 
   local ok, on_resource = pcall(function()
     -- selene: allow(global_usage)
-    return _G.Laravel.app("gf").cursorOnResource()
+    return Laravel.app("gf").cursorOnResource()
   end)
 
   if ok and on_resource then

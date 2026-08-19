@@ -31,7 +31,9 @@ local function replace_all(text)
 
   -- \V (very-nomagic) makes the "/\\"-only escape sufficient: without it,
   -- regex-special chars in code ([0], `.`) would be matched, not literal.
-  local ok, err = pcall(vim.cmd, ("%%s/\\V%s/%s/gc"):format(pattern, vim.fn.escape(replacement, "/\\")))
+  local ok, err = pcall(function()
+    vim.cmd(("%%s/\\V%s/%s/gc"):format(pattern, vim.fn.escape(replacement, "/\\")))
+  end)
   if not ok then
     vim.notify(("Replace failed: %s"):format(err), vim.log.levels.ERROR)
   end

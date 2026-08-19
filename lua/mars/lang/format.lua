@@ -223,7 +223,7 @@ function M.format(buf)
     return
   end
 
-  if not ok then
+  if not ok or not new_lines then
     if err then
       vim.notify(("Mars: %s failed on %s: %s"):format(name, vim.fs.basename(filename), err), vim.log.levels.WARN)
     end

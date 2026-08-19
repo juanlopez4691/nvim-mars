@@ -14,10 +14,20 @@ local M = {}
 ---@field buf integer
 ---@field win integer?
 ---@field job integer
+---@field win_config table
 ---@field esc_timer uv.uv_timer_t
 
 ---@type table<string, mars.helpers.term.Term>
 local terms = {}
+
+---@class mars.helpers.term.Opts
+---@field id? string
+---@field cmd string|string[]
+---@field cwd? string
+---@field win_config? table
+---@field focus? boolean
+---@field show? boolean
+---@field count? integer
 
 ---@param opts { id?: string, cmd: string|string[], count?: integer }
 ---@return string
@@ -89,9 +99,13 @@ end
 --- (autocmd-free, focus untouched). With `show = false` the process runs
 --- hidden (no window) until `M.open`/`M.toggle` surfaces it. Returns the
 --- term, or nil if the job failed to start.
----@param opts { id?: string, cmd: string|string[], cwd?: string, win_config: table, focus?: boolean, show?: boolean, count?: integer }
+---@param opts mars.helpers.term.Opts
 ---@return mars.helpers.term.Term?
 local function create(opts)
+  -- Creating (as opposed to surfacing an existing terminal) needs a window
+  -- config: the job's pty is pinned to its size.
+  local win_config = assert(opts.win_config, "term: win_config is required to create a terminal")
+
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].bufhidden = "wipe"
 
@@ -100,7 +114,7 @@ local function create(opts)
     cmd = type(opts.cmd) == "table" and opts.cmd or { opts.cmd },
     buf = buf,
     win = nil,
-    win_config = opts.win_config,
+    win_config = win_config,
     esc_timer = vim.uv.new_timer(),
   }
   terms[term.id] = term
@@ -149,8 +163,8 @@ local function create(opts)
       -- Pin the pty to the window's requested size: interactive shells
       -- otherwise report their own size and resize the split (a "30%"
       -- bottom terminal would balloon to ~80% of the screen).
-      height = opts.win_config.height,
-      width = opts.win_config.width,
+      height = win_config.height,
+      width = win_config.width,
       on_exit = function()
         vim.schedule(function()
           if terms[term.id] == term then
@@ -173,7 +187,7 @@ local function create(opts)
   term.job = job
 
   if opts.show ~= false then
-    attach_win(term, opts.win_config, opts.focus ~= false)
+    attach_win(term, win_config, opts.focus ~= false)
   end
 
   return term
@@ -188,7 +202,7 @@ end
 
 --- Opens (or focuses, unless `focus` is false) the terminal for `cmd`,
 --- surfacing it in a window if it was started hidden.
----@param opts { id?: string, cmd: string|string[], cwd?: string, win_config?: table, focus?: boolean, count?: integer }
+---@param opts mars.helpers.term.Opts
 ---@return mars.helpers.term.Term?
 function M.open(opts)
   local term = terms[id_for(opts)]
@@ -209,7 +223,7 @@ end
 --- Toggles the terminal for `cmd`: closes it when it's the current window,
 --- focuses it when it's open elsewhere, surfaces a hidden one, opens it
 --- otherwise.
----@param opts { id?: string, cmd: string|string[], cwd?: string, win_config?: table, count?: integer }
+---@param opts mars.helpers.term.Opts
 ---@return mars.helpers.term.Term?
 function M.toggle(opts)
   local term = terms[id_for(opts)]

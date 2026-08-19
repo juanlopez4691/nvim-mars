@@ -14,6 +14,7 @@ vim.api.nvim_create_autocmd("InsertCharPre", {
     if not node then
       return
     end
+    ---@type TSNode?
     local element = node
     while element do
       local type = element:type()

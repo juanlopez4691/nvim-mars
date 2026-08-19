@@ -11,7 +11,7 @@ local augroup = vim.api.nvim_create_augroup("mars_lazygit", { clear = true })
 --- Cached `lazygit --print-config-dir`: nil until looked up once, then the
 --- directory or false. Can't change within a session, so the blocking call
 --- runs once instead of on every open().
----@type string|boolean|nil
+---@type string|false|nil
 local lazygit_config_dir = nil
 
 --- Writes (once) a small lazygit config snippet forcing the `nvim-remote`

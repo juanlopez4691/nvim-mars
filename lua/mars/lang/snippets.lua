@@ -58,8 +58,10 @@ local function triggers_for(filetype)
     local decoded = read_file(name)
     if decoded then
       for _, entry in pairs(decoded) do
-        local prefixes = type(entry.prefix) == "table" and entry.prefix or { entry.prefix }
-        local body = type(entry.body) == "table" and table.concat(entry.body, "\n") or entry.body
+        -- Hoisted to locals: LuaLS can't narrow a field through type(entry.x).
+        local raw_prefix, raw_body = entry.prefix, entry.body
+        local prefixes = type(raw_prefix) == "table" and raw_prefix or { raw_prefix }
+        local body = type(raw_body) == "table" and table.concat(raw_body, "\n") or raw_body
         for _, prefix in ipairs(prefixes) do
           triggers[prefix] = body
         end

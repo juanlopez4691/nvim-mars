@@ -154,14 +154,18 @@ vim.api.nvim_create_autocmd("LspAttach", {
       end)
     end, { buffer = ev.buf, silent = true, desc = "File references" })
 
+    -- vtsls-specific kinds; valid per the LSP spec (kinds are a string
+    -- namespace) but absent from Neovim's lsp.CodeActionKind alias.
     vim.keymap.set("n", "<leader>cM", function()
       vim.lsp.buf.code_action({
+        ---@diagnostic disable-next-line: assign-type-mismatch
         context = { only = { "source.addMissingImports.ts" } },
         apply = true,
       })
     end, { buffer = ev.buf, silent = true, desc = "Add missing imports" })
     vim.keymap.set("n", "<leader>cD", function()
       vim.lsp.buf.code_action({
+        ---@diagnostic disable-next-line: assign-type-mismatch
         context = { only = { "source.fixAll.ts" } },
         apply = true,
       })

@@ -29,7 +29,7 @@ local term = require("mars.helpers.term")
 --- Launch options for the `opencode --port` terminal (a right split).
 --- `count` is pinned to 1 so `2<leader>o*` counts can't spawn a second
 --- OpenCode instance behind the scenes.
----@return { cmd: string[], cwd: string, count: integer, win_config: table }
+---@return { cmd: string[], cwd: string, count: integer, win_config: table, show?: boolean }
 local function terminal_opts()
   return {
     cmd = { "opencode", "--port" },

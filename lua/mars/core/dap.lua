@@ -58,7 +58,7 @@ end
 ---@return table
 local function get_args(config)
   local args = type(config.args) == "function" and (config.args() or {}) or config.args or {}
-  local args_str = type(args) == "table" and table.concat(args, " ") or args
+  local args_str = type(args) == "table" and table.concat(args, " ") or tostring(args)
 
   config = vim.deepcopy(config)
   config.args = function()

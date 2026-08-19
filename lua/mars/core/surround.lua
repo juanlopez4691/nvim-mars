@@ -173,7 +173,7 @@ end
 ---@param char string
 local function delete_surround(char)
   local open_pos, close_pos = resolve_pair(char)
-  if not open_pos then
+  if not open_pos or not close_pos then
     return
   end
   delete_char_at(close_pos)
@@ -186,7 +186,7 @@ end
 ---@param new_char string
 local function change_surround(old, new_char)
   local open_pos, close_pos = resolve_pair(old)
-  if not open_pos then
+  if not open_pos or not close_pos then
     return
   end
 
@@ -263,7 +263,7 @@ end
 ---@param motion_type "line"|"char"|"block"
 function M.opfunc(motion_type)
   local open_delim, close_delim = prompt_delimiters()
-  if not open_delim then
+  if not open_delim or not close_delim then
     return
   end
 
@@ -302,7 +302,7 @@ end, { expr = true, desc = "Add Surround" })
 
 vim.keymap.set("n", "yss", function()
   local open_delim, close_delim = prompt_delimiters()
-  if not open_delim then
+  if not open_delim or not close_delim then
     return
   end
   local row = vim.api.nvim_win_get_cursor(0)[1]
@@ -321,7 +321,7 @@ vim.keymap.set("x", "S", function()
   vim.cmd("normal! " .. vim.api.nvim_replace_termcodes("<Esc>", true, false, true))
 
   local open_delim, close_delim = prompt_delimiters()
-  if not open_delim then
+  if not open_delim or not close_delim then
     return
   end
 

@@ -4,3 +4,6 @@ base: lua51
 globals:
   vim:
     any: true
+  # Set by laravel.nvim's setup() (lua/mars/plugins/laravel.lua).
+  Laravel:
+    any: true
