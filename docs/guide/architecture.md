@@ -40,6 +40,20 @@ directly. `lua/mars/core/lsp.lua` scans the runtime path for every
 `vim.lsp.enable()` once for the whole list: dropping a new `lsp/foo.lua`
 file in is the entire integration step.
 
+## Two PHP servers, one filetype
+
+`intelephense` and `phpantom` both claim the `php` filetype and both stay
+enabled, but only one ever attaches to a given buffer. Neovim starts a
+server only when its `root_dir` resolver calls back, so each one runs the
+shared WordPress test in `lua/mars/helpers/php_project.lua` (`wp-config.php`,
+`wp-content` or `wp-includes` found walking up from the file) and either
+claims the buffer or declines it. WordPress goes to Intelephense for its
+stubs; Laravel and plain Composer projects go to PHPantom. Either way the
+workspace root is the nearest `composer.json`/`.git`, so a plugin or theme
+repo nested inside an install indexes itself rather than the whole site.
+Details in
+[ARCHITECTURE.md](https://github.com/joanlopez/nvim-mars/blob/main/ARCHITECTURE.md#two-php-servers-one-filetype).
+
 ## The `vim.pack` lazy-load wrapper
 
 `vim.pack` (Neovim >= 0.12) has no built-in event/filetype/command-based

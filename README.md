@@ -1,8 +1,9 @@
 # 🔴 Mars
 
-A minimal, native-first Neovim (>= 0.12) configuration, tailored for PHP,
-Laravel, and web development; built on as few plugins as modern Neovim's
-native APIs allow.
+A minimal, native-first Neovim (>= 0.12) configuration, built on as few
+plugins as modern Neovim's native APIs allow. It is heavily focused on PHP,
+Laravel and WordPress first, plus the web stack that usually comes with them
+(JavaScript/TypeScript, Blade, Twig, Tailwind CSS).
 
 In Catalonia, we have a proverb: "Qui no té feina, el gat pentina", which
 translates to "Those who have no work, brush the cat". This means that when
@@ -26,6 +27,34 @@ Guiding principles: rely on native APIs, use the fewest plugins possible,
 prioritize boot/runtime speed, keep the code modular and pragmatic, enforce
 Lua formatting and linting at all times, and document everything well enough
 for both humans and AI coding agents to contribute confidently.
+
+## PHP: Laravel and WordPress
+
+PHP is the language Mars is tuned for, and the two kinds of codebase it
+targets want different things from a language server, so Mars picks one per
+project instead of asking you to configure it:
+
+- **WordPress** gets [Intelephense](https://intelephense.com/), for its stubs.
+  Mars ships a curated stub list (WordPress, WooCommerce, ACF, Genesis,
+  Polylang, WP-CLI) and also picks up `php-stubs/*` packages installed in
+  Composer's global vendor dir, so core functions and hooks resolve with no
+  per-project setup.
+- **Everything else**, Laravel included, gets
+  [PHPantom](https://github.com/PHPantom-dev/phpantom_lsp) (`phpantom_lsp`),
+  which is faster and needs no stubs on a Composer project with a real
+  autoloader.
+
+Detection lives in `lua/mars/helpers/php_project.lua`: a buffer counts as
+WordPress when `wp-config.php`, `wp-content` or `wp-includes` shows up
+walking up from the file, so themes and plugins nested inside an install are
+caught too. Each server's `root_dir` then either claims the buffer or
+declines it, so only one of the two ever attaches. The workspace root stays
+at the nearest `composer.json`/`.git`, which keeps a plugin or theme repo
+indexing itself instead of the whole WordPress install.
+
+Laravel projects also get artisan/route/view pickers and Blade navigation
+under `<leader>l` (see [KEYMAPS.md](KEYMAPS.md)). Both get Pint, PHPCBF or
+php-cs-fixer on save, PHPStan and PHPCS diagnostics, and Xdebug via nvim-dap.
 
 ## Prerequisites
 
@@ -66,7 +95,8 @@ NVIM_APPNAME=nvim-mars nvim
 
 | Language              | LSP           | Formatter        | Linter          |
 | ---------------------- | --------------- | ------------------ | ----------------- |
-| PHP                   | Intelephense  | Pint, PHPCBF      | PHPStan, PHPCS  |
+| PHP (Laravel, plain)  | PHPantom      | Pint, PHPCBF, php-cs-fixer | PHPStan, PHPCS |
+| PHP (WordPress)       | Intelephense  | Pint, PHPCBF, php-cs-fixer | PHPStan, PHPCS |
 | Blade                 | blade-nav     | blade-formatter   | —               |
 | Twig                  | Twiggy LSP    | —                 | —               |
 | JavaScript/TypeScript | vtsls         | Prettierd         | ESLint          |

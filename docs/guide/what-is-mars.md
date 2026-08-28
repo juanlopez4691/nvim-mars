@@ -1,8 +1,9 @@
 # What is Mars
 
-Mars is a minimal, native-first Neovim (>= 0.12) configuration, tailored for
-PHP, Laravel, and web development; built on as few plugins as modern
-Neovim's native APIs allow.
+Mars is a minimal, native-first Neovim (>= 0.12) configuration, built on as
+few plugins as modern Neovim's native APIs allow. It is heavily focused on
+PHP, Laravel and WordPress first, plus the web stack that usually comes with
+them.
 
 Modern Neovim ships native LSP configuration, LSP-driven completion,
 snippets, folding, and a plugin manager (`vim.pack`, 0.12+) that make most of
@@ -23,11 +24,15 @@ gutter signs, a debugger UI.
 
 ## Who it's for
 
-Mars is opinionated toward PHP, Laravel, and general web development
-(JavaScript/TypeScript, Blade, Twig, Tailwind CSS), but the native-first
-approach itself isn't language-specific: see the
+Mars is opinionated toward PHP, Laravel and WordPress, and the web stack
+around them (JavaScript/TypeScript, Blade, Twig, Tailwind CSS). The PHP
+language server is picked per project: WordPress codebases get Intelephense
+with its stubs, everything else gets PHPantom, with no per-project
+configuration. See the
+[PHP section](https://github.com/joanlopez/nvim-mars#php-laravel-and-wordpress)
+and the
 [language support table](https://github.com/joanlopez/nvim-mars#language-support)
-in the README for the current LSP/formatter/linter matrix.
+in the README. The native-first approach itself isn't language-specific.
 
 It's also written to be legible to AI coding agents, not just humans:
 [AGENTS.md](https://github.com/joanlopez/nvim-mars/blob/main/AGENTS.md) in

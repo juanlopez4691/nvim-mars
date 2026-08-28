@@ -44,12 +44,34 @@ starting point, not a runtime dependency; `lsp/intelephense.lua` and
 behavior (global php-stubs discovery; a Neovim-config-aware `on_init` that
 only augments the `vim`/LuaJIT globals when editing Mars's own config).
 
-13 servers exist today: `antlersls`, `docker_compose_language_service`,
+14 servers exist today: `antlersls`, `docker_compose_language_service`,
 `dockerls`, `eslint`, `intelephense`, `jsonls`, `laravel_ls`, `lua_ls`,
-`marksman`, `tailwindcss`, `taplo`, `twiggy_language_server`, `vtsls`.
+`marksman`, `phpantom`, `tailwindcss`, `taplo`, `twiggy_language_server`,
+`vtsls`.
 
 These files are not `require_dir`'d: see [LSP Activation](#lsp-activation)
 below for how they actually get turned on.
+
+#### Two PHP servers, one filetype
+
+`intelephense` and `phpantom` both declare `filetypes = { "php" }`, and both
+stay enabled at all times. What keeps them from fighting is `root_dir`:
+Neovim only starts a server when its `root_dir` resolver calls `on_dir`, so
+each one inspects the buffer and either claims it or returns without calling
+back.
+
+The shared test is `lua/mars/helpers/php_project.lua`, which walks up from
+the buffer looking for `wp-config.php`, `wp-content` or `wp-includes`.
+Finding one means WordPress, and themes or plugins living under a
+`wp-content` ancestor count too. Intelephense claims those buffers, for its
+stubs; PHPantom (`phpantom_lsp`) claims everything else, Laravel and plain
+Composer projects included.
+
+Either way the workspace root is the nearest `composer.json`/`.git`, not the
+WordPress install root, so a nested plugin or theme repo indexes itself
+rather than the entire site. `lsp/intelephense.lua` also carries the stub
+catalogue and discovers globally installed `php-stubs/*` packages under
+`~/.composer` or `~/.config/composer`.
 
 ### `lua/mars/core/`: zero plugin dependencies
 
@@ -100,10 +122,12 @@ and `tools.lua` (shared executable resolution: project-local
 `PATH`).
 
 There is no dedicated `php.lua`, `laravel.lua`, `twig.lua`, `antlers.lua`,
-or `ts.lua` module yet: those languages' behavior today comes entirely from
-their `lsp/*.lua` config (`intelephense.lua`, `twiggy_language_server.lua`,
-`antlersls.lua`, `vtsls.lua`) plus the shared `format`/`lint`/`snippets`/
-`tools` modules above, not a per-language file. See
+or `ts.lua` module yet: those languages' behavior today comes from their
+`lsp/*.lua` config (`intelephense.lua`, `phpantom.lua`,
+`twiggy_language_server.lua`, `antlersls.lua`, `vtsls.lua`) plus the shared
+`format`/`lint`/`snippets`/`tools` modules above, not a per-language file.
+The one piece of PHP logic that lives outside `lsp/` is the WordPress test
+in `helpers/php_project.lua`, shared by the two PHP servers. See
 [Gaps](#gaps-between-agentsmd-and-the-current-tree).
 
 ### `lua/mars/plugins/`: one file per external plugin
@@ -122,9 +146,10 @@ Shared modules with no feature of their own, required on demand by any
 (a per-key debounce used by the indent-guide/pattern redraws and lint),
 `color.lua` (WCAG-readable foreground picked for a hex background),
 `term.lua` (the floating-terminal lifecycle shared by lazygit, scooter, and
-opencode), and `text.lua` (display-width truncation and `%`-escaping for the
-statusline/winbar/notify/diagnostics renderers). None are auto-loaded by
-`require_dir`.
+opencode), `text.lua` (display-width truncation and `%`-escaping for the
+statusline/winbar/notify/diagnostics renderers), and `php_project.lua` (the
+WordPress-install lookup both PHP servers gate their `root_dir` on). None
+are auto-loaded by `require_dir`.
 
 ### `lua/mars/pack.lua`
 
@@ -269,7 +294,7 @@ declined in favor of a native module, with the module that replaced each.
 | `fzf-lua` | Fuzzy file/grep/buffer/symbol picker; no native fuzzy-match UI exists. | Installed (`plugins/fzf-lua.lua`); files/live-grep/buffers/oldfiles under `<leader>f*`, git status/commits/branches under `<leader>g{s,c,b}`, LSP document/workspace symbols under `<leader>c{s,S,w}`. Also the picker backend for `dashboard.lua` and laravel.nvim. |
 | `gitsigns.nvim` | Git gutter signs, staging, blame; nontrivial diff-parsing and debounced rendering. | Installed (`plugins/gitsigns.lua`); hunk stage/reset/preview/nav, buffer stage/reset, line/toggle blame, `diffthis`, all under `<leader>gh*` and `]h`/`[h`. |
 | `which-key.nvim` | Leader-key hint popup and group labels; no native equivalent. | Installed (`plugins/which-key.lua`); declares the `<leader>{a,c,d,f,g,l,o,q,r,s,t,y}` group labels. |
-| `mason.nvim` | Cross-platform external tool/binary installer. | Installed (`plugins/mason.lua`); a small first-party `ensure_tools()` (intelephense, phpstan, phpcs, phpcbf, php-cs-fixer, pint, prettierd, vtsls, blade-formatter, and the rest of the language toolchain, exposed as `:MarsMasonInstall`) stands in for `mason-tool-installer`; no `mason-lspconfig`; servers are wired natively via `vim.lsp.enable`. |
+| `mason.nvim` | Cross-platform external tool/binary installer. | Installed (`plugins/mason.lua`); a small first-party `ensure_tools()` (intelephense, phpantom_lsp, phpstan, phpcs, phpcbf, php-cs-fixer, pint, prettierd, vtsls, blade-formatter, and the rest of the language toolchain, exposed as `:MarsMasonInstall`) stands in for `mason-tool-installer`; no `mason-lspconfig`; servers are wired natively via `vim.lsp.enable`. |
 | `nvim-treesitter` (main) | Parser install/update only; highlighting/folding stays native. | Installed (`plugins/treesitter.lua`); installs parsers, starts `vim.treesitter.*` highlighting per filetype, and wires `foldexpr` to treesitter with an LSP-folding upgrade on `LspAttach` when a client supports it. |
 | `nvim-dap` + `nvim-dap-ui` + `nvim-dap-virtual-text` + `mason-nvim-dap` | Debugging is the explicit "complex, worth a plugin" case. | Installed; `plugins/dap.lua` (the stack + gutter signs + dap-ui listeners), `plugins/dap-php.lua` (Xdebug adapter and launch configs, skipped when `.vscode/launch.json` exists), `plugins/dap-lua.lua` (osv adapter for Neovim's own Lua, lazy-loaded on `lua`), and `core/dap.lua` with the `<leader>d` debug keymaps. |
 | `opencode.nvim` | AI chat/agent integration; the sole AI surface. | Installed (`plugins/opencode.lua`); a right-split terminal running `opencode --port`, plus ask/prompt/operator/scroll action keymaps under `<leader>o*` (`go`/`goo` alongside). |
