@@ -100,6 +100,17 @@ vim.keymap.set(
   { silent = true, desc = "Recent" }
 )
 
+-- Global picker: VS-Code-like combined view of files, buffers and LSP symbols
+-- (prefix `$` buffers, `@` buffer symbols, `#` workspace symbols).
+vim.keymap.set(
+  "n",
+  "<leader>fg",
+  use(function(fzf_lua)
+    fzf_lua.global()
+  end),
+  { silent = true, desc = "Global" }
+)
+
 -- Catch-all meta-picker: lists every registered fzf-lua picker as a fuzzable
 -- entry, so the rest of these keymaps are discoverable from one place.
 vim.keymap.set(
