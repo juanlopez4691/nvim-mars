@@ -6,9 +6,6 @@
 
 local M = {}
 
----@type table<integer, string>
-local cache = {}
-
 --- An attached LSP client's root_dir/workspace_folder that actually
 --- contains `name`, or nil if none qualifies.
 ---@param buf integer
@@ -33,42 +30,20 @@ local function lsp_root(buf, name)
 end
 
 --- The project root for `buf`: LSP root, else nearest ".git" ancestor,
---- else 'cwd'. Cached per buffer until something that could change the
---- answer happens.
+--- else 'cwd'.
 ---@param buf? integer
 ---@return string
 function M.get(buf)
   buf = buf or vim.api.nvim_get_current_buf()
-  if cache[buf] then
-    return cache[buf]
-  end
-
   local name = vim.api.nvim_buf_get_name(buf)
-  local root
   if name ~= "" then
     local ok, git_root = pcall(vim.fs.root, buf, ".git")
-    root = lsp_root(buf, name) or (ok and git_root) or nil
+    local root = lsp_root(buf, name) or (ok and git_root) or nil
+    if root then
+      return root
+    end
   end
-  root = root or vim.fn.getcwd()
-
-  cache[buf] = root
-  return root
+  return vim.fn.getcwd()
 end
-
-local augroup = vim.api.nvim_create_augroup("mars_root", { clear = true })
-
-vim.api.nvim_create_autocmd({ "LspAttach", "BufWritePost", "DirChanged" }, {
-  group = augroup,
-  callback = function(ev)
-    cache[ev.buf] = nil
-  end,
-})
-
-vim.api.nvim_create_autocmd("BufDelete", {
-  group = augroup,
-  callback = function(ev)
-    cache[ev.buf] = nil
-  end,
-})
 
 return M
