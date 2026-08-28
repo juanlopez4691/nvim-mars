@@ -36,37 +36,24 @@ local NERD_FONT_ARROW = vim.fn.nr2char(0xe0b2)
 local UNICODE_ARROW = "◀"
 local ASCII_ARROW = "<"
 
--- Per-tier icon table and arrow glyph, resolved once per call via
--- current_tier() (both readers need the same three-way tier choice).
+-- Per-tier icon table and arrow glyph.
 local TIERS = {
   nerd = { icons = nerd_font_icons, arrow = NERD_FONT_ARROW },
   unicode = { icons = unicode_icons, arrow = UNICODE_ARROW },
   ascii = { icons = ascii_icons, arrow = ASCII_ARROW },
 }
 
---- The active icon tier. Read at call time, since the opt-ins live in
---- local.lua which loads after this module.
----@return "nerd"|"unicode"|"ascii"
-local function current_tier()
+--- The active icon tier (icons + arrow). Read at call time, since the
+--- opt-ins live in local.lua which loads after this module.
+---@return { arrow: string, icons: table<integer, string> }
+local function active_tier()
   if vim.g.have_nerd_font then
-    return "nerd"
+    return TIERS.nerd
   end
   if vim.g.mars_ascii_diagnostics then
-    return "ascii"
+    return TIERS.ascii
   end
-  return "unicode"
-end
-
---- Picks the leading arrow glyph for the current render.
----@return string
-local function diagnostic_arrow()
-  return TIERS[current_tier()].arrow
-end
-
---- Picks the icon table for the current render.
----@return table<integer, string>
-local function diagnostic_icons()
-  return TIERS[current_tier()].icons
+  return TIERS.unicode
 end
 
 -- Chip body and arrow highlight group names, per severity.
@@ -158,8 +145,9 @@ local function render_chip(bufnr, lnum, diag, text_width)
   if not (hl and arrow_hl) then
     return
   end
-  local icon = diagnostic_icons()[diag.severity] or ""
-  local arrow = diagnostic_arrow()
+  local tier = active_tier()
+  local icon = tier.icons[diag.severity] or ""
+  local arrow = tier.arrow
   local message = diag.message:gsub("\r", ""):gsub("\n", "  ")
 
   if text_width then
@@ -216,7 +204,7 @@ local function apply()
   vim.diagnostic.config({
     underline = true,
     severity_sort = true,
-    signs = { text = diagnostic_icons() },
+    signs = { text = active_tier().icons },
     virtual_text = false,
     float = {
       border = require("mars.ui.borders").style(),
