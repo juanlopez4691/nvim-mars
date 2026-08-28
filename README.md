@@ -130,11 +130,11 @@ NVIM_APPNAME=nvim-mars nvim
 init.lua                # Entrypoint
 lsp/                     # Native LSP server configs (vim.lsp.enable convention)
 lua/mars/
-├── core/                # Options, keymaps, autocmds; zero plugin dependencies
+├── core/                # Editing, LSP, diagnostics, terminals; zero plugin dependencies
 ├── ui/                  # Statusline, winbar, dashboard, notify; zero plugin dependencies
-├── lang/                # Per-language modules (php, laravel, blade, twig, format, lint, ...)
+├── lang/                # Formatting, linting, snippets, blade/antlers filetypes
 ├── plugins/              # One file per external plugin (vim.pack.add + config)
-├── helpers/             # Shared on-demand helpers (debounce, color, term, text)
+├── helpers/             # Shared on-demand helpers (debounce, color, term, text, php_project)
 ├── pack.lua             # Lazy-load wrapper around vim.pack
 └── health.lua            # :checkhealth mars
 ```

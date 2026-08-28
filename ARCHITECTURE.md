@@ -18,11 +18,11 @@ case, rather than glossed over.
 init.lua                # Entrypoint
 lsp/                     # Native LSP server configs (vim.lsp.enable convention)
 lua/mars/
-├── core/                # Options, LSP enable, completion, diagnostics, netrw, session, lazygit
-├── ui/                  # Statusline, winbar, dashboard, notify, patterns, colorscheme
+├── core/                # Options, editing, LSP enable, diagnostics, netrw, terminals, session
+├── ui/                  # Statusline, winbar, dashboard, notify, indent, patterns, colorscheme
 ├── lang/                # Formatting, linting, snippets, tool resolution, blade/antlers filetype setup
 ├── plugins/              # One file per external plugin (vim.pack.add + config)
-├── helpers/             # Shared on-demand helpers (debounce, color, term, text)
+├── helpers/             # Shared on-demand helpers (debounce, color, term, text, php_project)
 ├── pack.lua             # Lazy-load wrapper around vim.pack
 ├── health.lua            # :checkhealth mars
 └── local.lua.example    # Template for the gitignored lua/mars/local.lua
@@ -75,14 +75,31 @@ catalogue and discovers globally installed `php-stubs/*` packages under
 
 ### `lua/mars/core/`: zero plugin dependencies
 
-Today this holds: `options.lua` (editor options, plus the
-`vim.g.have_nerd_font` default), `lsp.lua` (enables every `lsp/*.lua`
-config), `completion.lua` (native `vim.lsp.completion`), `diagnostics.lua`
-(diagnostic display config, plus quickfix/location-list commands and
-keymaps), `netrw.lua` (netrw restyled as a tree-view sidebar), `session.lua`
-(`:mksession`-based per-directory session save/restore), `lazygit.lua`
-(a centered floating `lazygit` terminal with `nvim-remote` edit wiring), and
-`dap.lua` (the `<leader>d` debug keymaps driving nvim-dap).
+The biggest directory, grouped roughly by what each module does:
+
+- **Editor setup**: `options.lua` (editor options, plus the
+  `vim.g.have_nerd_font` default), `lines.lua` (number/cursorline modes per
+  focus), `scroll.lua`, `splits.lua` (directional navigation and resize),
+  `qol.lua` (yank highlight and other small autocmds), `bigfile.lua` (turns
+  expensive features off past a size threshold).
+- **LSP**: `lsp.lua` (enables every `lsp/*.lua` config), `completion.lua`
+  (native `vim.lsp.completion`), `diagnostics.lua` (inline chips plus
+  quickfix/location-list commands), `lsp_references.lua` (document-highlight
+  under the cursor), `renaming.lua`, `rootdir.lua` (on-demand project root),
+  `dap.lua` (the `<leader>d` debug keymaps driving nvim-dap).
+- **Editing**: `pairs.lua`, `surround.lua`, `autotag.lua`, `tagpairs.lua`,
+  `textobjects.lua`, `navigation.lua` (treesitter textobject motions),
+  `jump.lua` (two-char jump labels), `editing.lua` (line moves and visual
+  indent), `insert.lua`, `clipboard.lua`.
+- **Tools**: `netrw.lua` (netrw restyled as a tree-view sidebar),
+  `terminal.lua` (the generic `<leader>t` terminals), `lazygit.lua` and
+  `scooter.lua` (floating TUI terminals), `session.lua` (`:mksession`-based
+  per-directory session save/restore).
+
+Most of these replace what a distribution would pull a plugin in for
+(mini.pairs, vim-surround, nvim-ts-autotag, mini.ai, flash.nvim,
+nvim-treesitter-textobjects); where that's the case, the module's header
+comment names the plugin it stands in for.
 
 Each module owns both the keymaps and autocmds for the feature it
 implements, colocated with the logic; for example `lazygit.lua` defines
@@ -98,11 +115,14 @@ what's on disk right now (see [Gaps](#gaps-between-agentsmd-and-the-current-tree
 `statusline.lua` and `winbar.lua` (expression-based `vim.o.statusline` /
 `vim.o.winbar`, each resolving the target window via
 `g:statusline_winid`), `dashboard.lua` (a native `VimEnter` start screen
-whose picker actions route through `plugins/fzf-lua.lua`'s shared wrapper),
-`notify.lua` (a `vim.notify` replacement rendering stacked floating
-windows, top-right, auto-dismissing per severity), `patterns.lua`
-(extmark-based TODO/FIXME/HACK/WARN/NOTE/PERF comment highlighting plus hex
-color swatches, debounced to the visible window range), and
+whose picker actions route through `plugins/fzf-lua.lua`'s shared wrapper,
+with user-configurable header art), `notify.lua` (a `vim.notify` replacement
+rendering stacked floating windows, top-right, auto-dismissing per
+severity), `indent.lua` (extmark indent guides over the visible range, with
+the current level highlighted), `patterns.lua` (extmark-based
+TODO/FIXME/HACK/WARN/NOTE/PERF comment highlighting plus hex color swatches,
+debounced to the visible window range), `borders.lua` (the shared float
+border style, read from `vim.g.mars_border_style` at point of use), and
 `colorscheme.lua` (the built-in `default` colorscheme plus a handful of
 highlight-group overrides for window separators and the winbar).
 

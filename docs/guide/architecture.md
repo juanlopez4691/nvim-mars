@@ -12,11 +12,11 @@ of sync.
 init.lua                 # Entrypoint
 lsp/                      # Native LSP server configs (vim.lsp.enable convention)
 lua/mars/
-├── core/                 # Options, LSP enable, completion, diagnostics, netrw, session, lazygit
-├── ui/                   # Statusline, winbar, dashboard, notify, patterns, colorscheme
+├── core/                 # Options, editing, LSP enable, diagnostics, netrw, terminals, session
+├── ui/                   # Statusline, winbar, dashboard, notify, indent, patterns, colorscheme
 ├── lang/                 # Formatting, linting, snippets, tool resolution, blade/antlers filetypes
 ├── plugins/               # One file per external plugin (vim.pack.add + config)
-├── helpers/              # Shared on-demand helpers (debounce, color, term, text)
+├── helpers/              # Shared on-demand helpers (debounce, color, term, text, php_project)
 ├── pack.lua              # Lazy-load wrapper around vim.pack
 ├── health.lua             # :checkhealth mars
 └── local.lua.example     # Template for the gitignored lua/mars/local.lua
