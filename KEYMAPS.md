@@ -32,10 +32,12 @@ F-key), not separate bindings with different behavior.
 ## Code (`<leader>c`)
 
 Source: [`lua/mars/core/diagnostics.lua`](lua/mars/core/diagnostics.lua),
-[`lua/mars/plugins/fzf-lua.lua`](lua/mars/plugins/fzf-lua.lua).
+[`lua/mars/plugins/fzf-lua.lua`](lua/mars/plugins/fzf-lua.lua),
+[`lua/mars/core/lsp.lua`](lua/mars/core/lsp.lua).
 
 | Key           | Mode | Action                                                             |
 | ------------- | ---- | ------------------------------------------------------------------- |
+| `<leader>ca`  | n, x | LSP code actions (same as the native `gra`)                       |
 | `<leader>cq`  | n    | Send workspace diagnostics to the quickfix list and open it       |
 | `<leader>cQ`  | n    | Send workspace **error-only** diagnostics to the quickfix list    |
 | `<leader>cl`  | n    | Send current buffer's diagnostics to the location list and open it |

@@ -48,6 +48,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
 -- functions with human-readable descs keeps the keys native while making
 -- which-key menus legible.
 vim.keymap.set({ "n", "x" }, "gra", vim.lsp.buf.code_action, { desc = "Code Action" })
+-- Same action under the `<leader>c` "Code" group, where which-key surfaces it.
+vim.keymap.set({ "n", "x" }, "<leader>ca", vim.lsp.buf.code_action, { desc = "Code Action" })
 vim.keymap.set("n", "grr", vim.lsp.buf.references, { desc = "References" })
 vim.keymap.set("n", "gri", vim.lsp.buf.implementation, { desc = "Implementation" })
 vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { desc = "Type Definition" })
