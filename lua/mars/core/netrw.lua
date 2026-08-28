@@ -50,6 +50,9 @@ local function open_explorer(dir)
   -- The `:Lexplore` command is redefined below to route here, so call the
   -- autoload function directly rather than recursing through the command.
   vim.fn["netrw#Lexplore"](0, on_right() and 1 or 0, dir or "")
+  -- Netrw carves the sidebar out of one window, leaving the rest uneven; equalize.
+  -- The sidebar's 'winfixwidth' keeps <C-w>= from stretching it.
+  vim.cmd("wincmd =")
 end
 
 --- Toggles the sidebar: closes it if a netrw window is already open,
