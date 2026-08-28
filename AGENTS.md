@@ -220,6 +220,10 @@ Two unrelated things share the name: keep them distinct:
   - `init.lua`: entrypoint.
   - `lsp/*.lua`: native LSP server configs, auto-loaded by
     `vim.lsp.enable()` (Neovim >= 0.11 convention). One file per server.
+    Two of them share the `php` filetype: `intelephense.lua` (WordPress) and
+    `phpantom.lua` (everything else). They stay apart by gating `root_dir`
+    on `lua/mars/helpers/php_project.lua`, so exactly one attaches per
+    buffer; keep that gate intact when touching either file.
   - `lua/mars/core/`: options, keymaps, autocmds. Zero plugin dependencies.
   - `lua/mars/ui/`: statusline, winbar, dashboard, notify. Zero plugin
     dependencies.
@@ -228,8 +232,8 @@ Two unrelated things share the name: keep them distinct:
   - `lua/mars/plugins/`: one file per external plugin: `vim.pack.add()` call
     plus that plugin's config.
   - `lua/mars/helpers/`: shared on-demand helpers (debounce, color, term,
-    text). Not auto-loaded; required explicitly by whichever module
-    needs them.
+    text, php_project). Not auto-loaded; required explicitly by whichever
+    module needs them.
   - `lua/mars/pack.lua`: the lazy-load wrapper around `vim.pack`.
   - `lua/mars/local.lua`: gitignored, user-specific overrides. Not part of
     the repo; see `lua/mars/local.lua.example`.
