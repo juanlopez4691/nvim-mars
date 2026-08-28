@@ -305,7 +305,34 @@ local NETRW_HELP = {
 --- Shows the netrw keymap reference in a centered floating window.
 --- Dismissible with `q`/`<Esc>`.
 local function show_netrw_help()
-  require("mars.helpers.popup").show(NETRW_HELP)
+  local lines = NETRW_HELP
+  local width = 0
+  for _, line in ipairs(lines) do
+    width = math.max(width, vim.fn.strdisplaywidth(line))
+  end
+  local height = math.min(#lines, math.max(10, vim.o.lines - 2))
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].bufhidden = "wipe"
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    width = width + 4,
+    height = height,
+    row = math.max(0, math.floor((vim.o.lines - (height + 2)) / 2)),
+    col = math.max(0, math.floor((vim.o.columns - (width + 4)) / 2)),
+    style = "minimal",
+    border = require("mars.ui.borders").style(),
+  })
+
+  local function close()
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+  end
+  vim.keymap.set("n", "q", close, { buffer = buf, desc = "Popup: close" })
+  vim.keymap.set("n", "<Esc>", close, { buffer = buf, desc = "Popup: close" })
 end
 
 --- Namespace for the tree-line overlay (see draw_tree_lines).
