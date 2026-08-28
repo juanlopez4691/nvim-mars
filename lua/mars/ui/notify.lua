@@ -66,15 +66,9 @@ local MAX_WIDTH = 60
 local PAD_X = 1
 local PAD_Y = 1
 
--- Must match the module path require_dir() derives for this file, so a
--- manual :source of this buffer finds what an earlier load stashed here.
-local MODULE_NAME = "mars.ui.notify"
-
 -- The un-overridden vim.notify, kept as the :messages sink and the fallback
--- for internal failures. Stashed in package.loaded so a re-source resolves
--- it back instead of wrapping this wrapper.
-local stashed = package.loaded[MODULE_NAME]
-local default_notify = (type(stashed) == "table" and stashed.default_notify) or vim.notify
+-- for internal failures.
+local default_notify = vim.notify
 
 ---@class MarsNotifyEntry
 ---@field win integer
@@ -283,8 +277,6 @@ local function notify(msg, level, opts)
 end
 
 vim.notify = notify
-
-package.loaded[MODULE_NAME] = { default_notify = default_notify }
 
 -- clear = true so re-sourcing replaces this generation's autocmds instead
 -- of stacking a duplicate set.
