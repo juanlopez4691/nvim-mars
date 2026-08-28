@@ -9,7 +9,9 @@ local M = {}
 ---@param bufnr integer
 ---@return string?
 function M.wp_root(bufnr)
-  local dir = vim.fs.dirname(vim.fn.bufname(bufnr))
+  -- Absolute, as vim.fs.root does it: `bufname()` is cwd-relative, and an
+  -- upward walk from a relative path stops at the cwd.
+  local dir = vim.fs.abspath(vim.fs.dirname(vim.api.nvim_buf_get_name(bufnr)))
   local hits = vim.fs.find({ "wp-config.php", "wp-content", "wp-includes" }, {
     upward = true,
     path = dir,
