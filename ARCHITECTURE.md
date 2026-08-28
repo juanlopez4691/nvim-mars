@@ -22,7 +22,7 @@ lua/mars/
 ├── ui/                  # Statusline, winbar, dashboard, notify, patterns, colorscheme
 ├── lang/                # Formatting, linting, snippets, tool resolution, blade/antlers filetype setup
 ├── plugins/              # One file per external plugin (vim.pack.add + config)
-├── helpers/             # Shared on-demand helpers (debounce, color, popup, term, text)
+├── helpers/             # Shared on-demand helpers (debounce, color, term, text)
 ├── pack.lua             # Lazy-load wrapper around vim.pack
 ├── health.lua            # :checkhealth mars
 └── local.lua.example    # Template for the gitignored lua/mars/local.lua
@@ -121,10 +121,10 @@ Shared modules with no feature of their own, required on demand by any
 `core`/`ui`/`lang`/`plugins` module that needs them. Today: `debounce.lua`
 (a per-key debounce used by the indent-guide/pattern redraws and lint),
 `color.lua` (WCAG-readable foreground picked for a hex background),
-`popup.lua` (a centered, dismissible read-only float), `term.lua` (the
-floating-terminal lifecycle shared by lazygit, scooter, and opencode), and
-`text.lua` (display-width truncation and `%`-escaping for the statusline/
-winbar/notify/diagnostics renderers). None are auto-loaded by `require_dir`.
+`term.lua` (the floating-terminal lifecycle shared by lazygit, scooter, and
+opencode), and `text.lua` (display-width truncation and `%`-escaping for the
+statusline/winbar/notify/diagnostics renderers). None are auto-loaded by
+`require_dir`.
 
 ### `lua/mars/pack.lua`
 

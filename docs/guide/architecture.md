@@ -16,7 +16,7 @@ lua/mars/
 ├── ui/                   # Statusline, winbar, dashboard, notify, patterns, colorscheme
 ├── lang/                 # Formatting, linting, snippets, tool resolution, blade/antlers filetypes
 ├── plugins/               # One file per external plugin (vim.pack.add + config)
-├── helpers/              # Shared on-demand helpers (debounce, color, popup, term, text)
+├── helpers/              # Shared on-demand helpers (debounce, color, term, text)
 ├── pack.lua              # Lazy-load wrapper around vim.pack
 ├── health.lua             # :checkhealth mars
 └── local.lua.example     # Template for the gitignored lua/mars/local.lua
