@@ -74,12 +74,22 @@ vim.api.nvim_create_autocmd("LspAttach", {
       and client:supports_method(vim.lsp.protocol.Methods.textDocument_hover, args.buf)
       and vim.bo[args.buf].keywordprg == ""
     then
+      -- Esc closes the unfocused hover float; movement already does via its default close_events.
+      local function close_hover()
+        vim.keymap.del("n", "<Esc>", { buffer = args.buf })
+        local float = vim.b[args.buf].lsp_floating_preview
+        if float and vim.api.nvim_win_is_valid(float) then
+          vim.api.nvim_win_close(float, true)
+        end
+      end
+
       vim.keymap.set("n", "K", function()
         vim.lsp.buf.hover({
           border = require("mars.ui.borders").style(),
           max_width = 80,
           max_height = 16,
         })
+        vim.keymap.set("n", "<Esc>", close_hover, { buffer = args.buf, silent = true, desc = "Close hover popup" })
       end, { buffer = args.buf, silent = true, desc = "Hover" })
     end
   end,
