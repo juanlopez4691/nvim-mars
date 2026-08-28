@@ -25,21 +25,58 @@ return {
   commands = {
     ["_typescript.moveToFileRefactoring"] = function(command, ctx)
       local client = assert(vim.lsp.get_client_by_id(ctx.client_id))
-      vim.ui.input({ prompt = "Move to file: ", default = vim.fn.expand("%:p") }, function(target)
-        if not target or target == "" then
-          return
-        end
-        local arguments = command.arguments or {}
-        arguments[#arguments + 1] = vim.fn.fnamemodify(target, ":p")
+      ---@type string, string, vim.lsp.Range
+      local action, uri, range = unpack(command.arguments)
+
+      local function move(newf)
         client:request("workspace/executeCommand", {
           command = command.command,
-          arguments = arguments,
-        }, function(err, result)
-          if err then
-            vim.notify(("vtsls move-to-file failed: %s"):format(err.message), vim.log.levels.ERROR)
-            return
+          arguments = { action, uri, range, newf },
+        })
+      end
+
+      local fname = vim.uri_to_fname(uri)
+      client:request("workspace/executeCommand", {
+        command = "typescript.tsserverRequest",
+        arguments = {
+          "getMoveToRefactoringFileSuggestions",
+          {
+            file = fname,
+            startLine = range.start.line + 1,
+            startOffset = range.start.character + 1,
+            endLine = range["end"].line + 1,
+            endOffset = range["end"].character + 1,
+          },
+        },
+      }, function(err, result)
+        if err then
+          vim.notify(("vtsls move-to-file suggestions failed: %s"):format(err.message), vim.log.levels.WARN)
+          return
+        end
+        local files = result and result.body and result.body.files
+        if not files then
+          return
+        end
+        table.insert(files, 1, "Enter new path...")
+        vim.ui.select(files, {
+          prompt = "Select move destination:",
+          format_item = function(f)
+            return vim.fn.fnamemodify(f, ":~:.")
+          end,
+        }, function(f)
+          if f and f:find("^Enter new path") then
+            vim.ui.input({
+              prompt = "Enter move destination:",
+              default = vim.fn.fnamemodify(fname, ":h") .. "/",
+              completion = "file",
+            }, function(newf)
+              if newf then
+                move(newf)
+              end
+            end)
+          elseif f then
+            move(f)
           end
-          vim.lsp.util.apply_workspace_edit(result, client.offset_encoding)
         end)
       end)
     end,
