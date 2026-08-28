@@ -33,6 +33,7 @@ local function check_tools()
   vim.health.start("Language/feature tools")
   check_binary("lazygit", { advice = "used by the git terminal integration (M4)" })
   check_binary("php", { advice = "PHP toolchain (needed for PHP/Laravel development)" })
+  check_binary("phpantom_lsp", { advice = "PHP language server (Laravel/composer projects)" })
   check_binary("node", { advice = "Node toolchain (needed for JS/TS development)" })
   check_binary("tree-sitter", { advice = "tree-sitter CLI (used by nvim-treesitter to build parsers)" })
 

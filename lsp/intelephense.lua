@@ -232,7 +232,13 @@ local stubs = {
 return {
   cmd = { "intelephense", "--stdio" },
   filetypes = { "php" },
-  root_markers = { ".git", "composer.json" },
+  -- WP-only; keep the composer/git root so nested plugin repos index themselves, not the whole install.
+  root_dir = function(bufnr, on_dir)
+    local wp = require("mars.helpers.php_project").wp_root(bufnr)
+    if wp then
+      on_dir(vim.fs.root(bufnr, { "composer.json", ".git" }) or wp)
+    end
+  end,
   settings = {
     intelephense = {
       telemetry = {
