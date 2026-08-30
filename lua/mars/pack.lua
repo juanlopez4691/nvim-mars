@@ -31,7 +31,7 @@ end
 --- plugins.
 vim.api.nvim_create_user_command("PackUpdate", function(cmd)
   local names = vim.split(vim.trim(cmd.args), "%s+", { trimempty = true })
-  vim.pack.update(names)
+  vim.pack.update(#names > 0 and names or nil)
 end, { desc = "Update plugins (native vim.pack)", nargs = "*" })
 
 return M
