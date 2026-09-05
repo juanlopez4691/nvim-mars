@@ -60,9 +60,13 @@ local function use(fn)
       -- from `vim.g.have_nerd_font`.
       local size = type(vim.g.mars_fzf_size) == "table" and vim.g.mars_fzf_size or {}
       local opts = { "default-title" }
+      -- fzf-lua hardcodes its own borders; it ignores 'winborder'.
+      local border = require("mars.ui.borders").style()
       opts.winopts = {
         width = size.width or 0.8,
         height = size.height or 0.85,
+        border = border,
+        preview = { border = border },
       }
       require("fzf-lua").setup(opts)
     end
