@@ -173,27 +173,44 @@ local function render_chip(bufnr, lnum, diag, text_width)
   })
 end
 
+--- Keeps only the most severe diagnostic on each line (lower `severity`
+--- number wins; ERROR is 1), keyed by its 0-indexed line.
+---@param diagnostics vim.Diagnostic[]
+---@return table<integer, vim.Diagnostic>
+local function worst_per_line(diagnostics)
+  local worst = {}
+  for _, diag in ipairs(diagnostics) do
+    local current = worst[diag.lnum]
+    if not current or diag.severity < current.severity then
+      worst[diag.lnum] = diag
+    end
+  end
+  return worst
+end
+
 --- Redraws every diagnostic chip for `bufnr` from scratch: clears the
 --- namespace, then re-renders one chip per line showing its most severe
---- diagnostic (lower `severity` number wins; ERROR is 1).
+--- diagnostic.
 ---@param bufnr integer
 local function refresh_chips(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then
     return
   end
   vim.api.nvim_buf_clear_namespace(bufnr, CHIP_NAMESPACE, 0, -1)
-  local worst_by_line = {}
-  for _, diag in ipairs(vim.diagnostic.get(bufnr)) do
-    local current = worst_by_line[diag.lnum]
-    if not current or diag.severity < current.severity then
-      worst_by_line[diag.lnum] = diag
-    end
-  end
   local text_width = window_text_width(bufnr)
-  for lnum, diag in pairs(worst_by_line) do
+  for lnum, diag in pairs(worst_per_line(vim.diagnostic.get(bufnr))) do
     render_chip(bufnr, lnum, diag, text_width)
   end
 end
+
+-- One sign per line: `severity_sort` only orders them, so several
+-- diagnostics on a line still stack icons across the gutter.
+local builtin_signs = vim.diagnostic.handlers.signs
+vim.diagnostic.handlers.signs = vim.tbl_extend("force", builtin_signs, {
+  show = function(namespace, bufnr, diagnostics, opts)
+    builtin_signs.show(namespace, bufnr, vim.tbl_values(worst_per_line(diagnostics)), opts)
+  end,
+})
 
 --- (Re-)applies the diagnostic config with the current icon tier, chip
 --- highlights, and a chip redraw for every open buffer. Needs re-running
