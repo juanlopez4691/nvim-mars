@@ -5,8 +5,7 @@
 -- wants glyphs reads this at point of use.
 vim.g.have_nerd_font = false
 
--- Floating-window border style. Override in lua/mars/local.lua and call
--- require("mars.ui.borders").setup().
+-- Floating-window border style; override in lua/mars/local.lua.
 vim.g.mars_border_style = "rounded"
 
 local opt = vim.opt

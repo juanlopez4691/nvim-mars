@@ -21,3 +21,6 @@ require_dir("lang")
 -- Local, gitignored overrides (see lua/mars/local.lua.example). Loaded last
 -- so they can override anything set above.
 pcall(require, "mars.local")
+
+-- 'winborder'/'pumborder' are options, not point-of-use reads; re-apply.
+require("mars.ui.borders").setup()

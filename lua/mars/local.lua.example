@@ -13,7 +13,6 @@
 
 -- Floating window border style: "rounded" (default) | "single" | "solid" | "none"
 -- vim.g.mars_border_style = "single"
--- require("mars.ui.borders").setup()
 
 -- Floating terminal (lazygit/scooter) size as fractions of the editor.
 -- vim.g.mars_float_terminal_size = { width = 0.9, height = 0.9 }

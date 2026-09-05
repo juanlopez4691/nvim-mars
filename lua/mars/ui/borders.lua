@@ -9,7 +9,8 @@ function M.style()
   return vim.g.mars_border_style or "rounded"
 end
 
---- Applies the border style to winborder, pumborder, and the diagnostic float config.
+--- Applies the border style to winborder, pumborder, and the diagnostic float
+--- config. Re-run from init.lua after local.lua.
 function M.setup()
   local s = M.style()
   vim.o.winborder = s
